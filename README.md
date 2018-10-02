@@ -1,4 +1,4 @@
-# jvm-watchdog
+# jvmquake
 A JVMTI agent that attaches to your JVM and kills it when things go sideways
 
 This project is heavily inspired by `airlift/jvmkill` written by
@@ -32,5 +32,5 @@ Once you've got the agent built, to use it just run your java program
 with `agent-path`
 
 ```
-java -agentpath:/path/to/lib-jvm-watchdog.so <your java program here>
+java -agentpath:/path/to/lib-jvmquake.so <your java program here>
 ```
