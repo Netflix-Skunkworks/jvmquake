@@ -5,12 +5,12 @@ endif
 INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
 CFLAGS=-Wall -Werror -fPIC -shared $(INCLUDE)
 
-TARGET=lib-jvm-watchdog.so
+TARGET=libjvmquake.so
 
 .PHONY: all clean test
 
 all:
-	gcc $(CFLAGS) -o $(TARGET) jvm-watchdog.c
+	gcc $(CFLAGS) -o $(TARGET) jvmquake.c
 	chmod 644 $(TARGET)
 
 clean:
@@ -23,7 +23,7 @@ easy: all
 	$(JAVA_HOME)/bin/javac tests/EasyOOM.java
 	$(JAVA_HOME)/bin/java -Xmx1m \
 	    -XX:+HeapDumpOnOutOfMemoryError \
-	    -XX:OnOutOfMemoryError='/bin/echo hello' \
+	    -XX:OnOutOfMemoryError='/bin/echo running OnOutOfMemoryError' \
 	    -agentpath:$(PWD)/$(TARGET) \
 	    -cp $(PWD)/tests EasyOOM
 
