@@ -17,6 +17,7 @@ clean:
 	rm -f $(TARGET)
 	rm -f *.class
 	rm -f *.hprof
+	rm -f core
 	rm -f tests/*.class
 
 easy: all
@@ -25,6 +26,14 @@ easy: all
 	    -XX:+HeapDumpOnOutOfMemoryError \
 	    -XX:OnOutOfMemoryError='/bin/echo running OnOutOfMemoryError' \
 	    -agentpath:$(PWD)/$(TARGET) \
+	    -cp $(PWD)/tests EasyOOM
+
+easy_opt: all
+	$(JAVA_HOME)/bin/javac tests/EasyOOM.java
+	$(JAVA_HOME)/bin/java -Xmx1m \
+	    -XX:+HeapDumpOnOutOfMemoryError \
+	    -XX:OnOutOfMemoryError='/bin/echo running OnOutOfMemoryError' \
+	    -agentpath:$(PWD)/$(TARGET)=ABORT,10,1 \
 	    -cp $(PWD)/tests EasyOOM
 
 hard: all
@@ -41,4 +50,20 @@ hard: all
 		-XX:+HeapDumpOnOutOfMemoryError \
 		-Xloggc:gclog \
 	    -agentpath:$(PWD)/$(TARGET) \
+	    -cp $(PWD)/tests SlowDeathOOM
+
+hard_opt: all
+	$(JAVA_HOME)/bin/javac tests/SlowDeathOOM.java
+	$(JAVA_HOME)/bin/java -Xmx100m \
+	    -XX:OnOutOfMemoryError='/bin/echo OOMKILL' \
+		-XX:+UseParNewGC \
+		-XX:+UseConcMarkSweepGC \
+		-XX:CMSInitiatingOccupancyFraction=75 \
+		-XX:+PrintGCDetails \
+		-XX:+PrintGCDateStamps \
+		-XX:+PrintGCApplicationConcurrentTime \
+		-XX:+PrintGCApplicationStoppedTime \
+		-XX:+HeapDumpOnOutOfMemoryError \
+		-Xloggc:gclog \
+	    -agentpath:$(PWD)/$(TARGET)=ABORT,1,1 \
 	    -cp $(PWD)/tests SlowDeathOOM

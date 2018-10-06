@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
@@ -9,16 +10,23 @@
 #include <jvmti.h>
 
 #define NANOS 1000000000L
-// TODO: make this configurable
-#define LIMIT 30
+
+enum action {OOM, ABORT, KILL};
+const char * action_lookup[] = {"OOM", "ABORT", "KILL"};
 
 static struct timespec last_start, last_end;
 static unsigned long val;
 static jrawMonitorID lock;
-static short shouldOOM = 0;
 
-/* On OOM, kill the process. This happens after the HeapDumpOnOutOfMemory
- */
+// Default values for the token bucket algorithm
+static int watchdog_action = OOM;
+static int watchdog_gc_seconds = 30;
+static int watchdog_runtime_weight = 5;
+
+// Signal variable that the watchdog should trigger an action
+static short trigger_watchdog = 0;
+
+// On OOM, kill the process. This happens after the HeapDumpOnOutOfMemory
 static void JNICALL
 resourceExhausted(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jint flags,
                   const void *reserved, const char *description) {
@@ -47,16 +55,23 @@ watchdog(jvmtiEnv* jvmti, JNIEnv* jni, void *p) {
         return;
     }
 
-    // If we reach this point and shouldOOM is true, then we know that
+    // If we reach this point and trigger_watchdog is true, then we know that
     // we need to throw an OOM exception
 
-    if (shouldOOM == 1) {
-        fprintf(stderr, "JVM Watchdog triggered! Forcing OOM\n");
-
-        // Force the JVM to run out of memory really quickly
-        for ( ;; ) {
-            // Allocate 8GB blocks until we run out of memory
-            (*jni)->NewLongArray(jni, 1000000000);
+    if (trigger_watchdog == 1) {
+        if (watchdog_action == OOM) {
+            fprintf(stderr, "JVM Watchdog triggered! Forcing OOM\n");
+            // Force the JVM to run out of memory really quickly
+            for ( ;; ) {
+                // Allocate 8GB blocks until we run out of memory
+                (*jni)->NewLongArray(jni, 1000000000);
+            }
+        } else if (watchdog_action == ABORT) {
+            fprintf(stderr, "JVM Watchdog triggered! Forcing Core Dump\n");
+            abort();
+        } else if (watchdog_action == KILL) {
+            fprintf(stderr, "JVM Watchdog triggered! Killing Process\n");
+            kill(getpid(), SIGKILL);
         }
     }
     // normal exit
@@ -125,10 +140,10 @@ gcFinished(jvmtiEnv *jvmti) {
     // Token bucket algorithm
     val += gc_nanos;
 
-    if (val > (NANOS * LIMIT)) {
+    if (val > (NANOS * watchdog_gc_seconds)) {
         // Trigger kill due to excessive GC
         fprintf(stderr, "Excessive GC: setting flag and notifying!\n");
-        shouldOOM = 1;
+        trigger_watchdog = 1;
         err = (*jvmti)->RawMonitorEnter(jvmti, lock);
         err = (*jvmti)->RawMonitorNotify(jvmti, lock);
         err = (*jvmti)->RawMonitorExit(jvmti, lock);
@@ -148,9 +163,33 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
     jvmtiEnv *jvmti;
     jvmtiError err;
 
+    // Parse options
+    int opt_gc_seconds = watchdog_gc_seconds;
+    int opt_runtime_weight = watchdog_runtime_weight;
+    char opt_action[5] = "";
+    strncpy(opt_action, action_lookup[watchdog_action], 5);
+    int num_options = 0;
+
+    num_options = sscanf(options, "%5[^,],%d,%d",
+                         opt_action, &opt_gc_seconds, &opt_runtime_weight);
+    if (num_options == 3) {
+        fprintf(stdout, "jvmquake received %d options: %s,%d,%d \n",
+                num_options, opt_action, opt_gc_seconds, opt_runtime_weight);
+        for(int i = 0; i < 3; i++) {
+            if (strcmp(action_lookup[i], opt_action) == 0) {
+                watchdog_action = i;
+            }
+        }
+        watchdog_gc_seconds = opt_gc_seconds;
+        watchdog_runtime_weight = opt_runtime_weight;
+    } else {
+        fprintf(stdout, "jvmquake using default options\n");
+    }
+
+    // Initialize global state
     clock_gettime(CLOCK_MONOTONIC, &last_start);
     clock_gettime(CLOCK_MONOTONIC, &last_end);
-	shouldOOM = 0;
+	trigger_watchdog = 0;
 
     jint rc = (*vm)->GetEnv(vm, (void **) &jvmti, JVMTI_VERSION);
     if (rc != JNI_OK) {
