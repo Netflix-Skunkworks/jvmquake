@@ -43,8 +43,19 @@ make hard
 
 # Using
 Once you've got the agent built, to use it just run your java program
-with `agent-path`
+with `agentpath` or `agentlib`.
 
 ```
-java -agentpath:/path/to/libjvmquake.so <your java program here>
+java -agentpath:/path/to/libjvmquake.so=<options> <your java program here>
 ```
+
+`options` are `threshold seconds (int), runtime_weight (int), action (int)`
+ * `threshold` determines the maximum GC "deficit" which can be accumulated
+   before jvmwatchdog takes action, specified in seconds (default: 30)
+ * `runtime_weight` determines the factor by which to multiply running JVM time,
+   when weighing it against GCing time. "Deficit" is accumulated as
+   `runtime * runtime_weight - gc_time`, and is compared against `threshold` to
+   determine whether to take action. (default: 5)
+ * `action` determines what action is taken when threshold is exceeded. If zero,
+   jvmquake attempts to produce an OOM within the JVM. If nonzero, jvmquake
+   raises that signal number as an OS-level signal (default: 0)
