@@ -54,7 +54,7 @@ java -agentpath:/path/to/libjvmquake.so=<options> <your java program here>
    before jvmwatchdog takes action, specified in seconds (default: 30)
  * `runtime_weight` determines the factor by which to multiply running JVM time,
    when weighing it against GCing time. "Deficit" is accumulated as
-   `runtime * runtime_weight - gc_time`, and is compared against `threshold` to
+   `gc_time - runtime * runtime_weight`, and is compared against `threshold` to
    determine whether to take action. (default: 5)
  * `action` determines what action is taken when threshold is exceeded. If zero,
    jvmquake attempts to produce an OOM within the JVM. If nonzero, jvmquake
