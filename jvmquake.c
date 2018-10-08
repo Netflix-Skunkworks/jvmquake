@@ -11,20 +11,19 @@
 
 #define NANOS 1000000000L
 
-enum action {OOM, ABORT, KILL};
-const char * action_lookup[] = {"OOM", "ABORT", "KILL"};
-
 static struct timespec last_start, last_end;
 static unsigned long val;
 static jrawMonitorID lock;
 
-// Default values for the token bucket algorithm
-static int watchdog_action = OOM;
-static int watchdog_gc_seconds = 30;
-static int watchdog_runtime_weight = 5;
+// Defaults
+static int opt_gc_threshold = 30; // seconds
+// corresponds to a thoughput of 1/(5+1) == 16.666%
+static int opt_runtime_weight = 5;
+// trigger an OOM
+static int opt_signal = 0;
 
 // Signal variable that the watchdog should trigger an action
-static short trigger_watchdog = 0;
+static short trigger_killer = 0;
 
 // On OOM, kill the process. This happens after the HeapDumpOnOutOfMemory
 static void JNICALL
@@ -34,13 +33,14 @@ resourceExhausted(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jint flags,
     // e.g. if it was for excessive GC or OOM or what
     fprintf(stderr,
             "ResourceExhausted: %s: killing current process!\n", description);
-    kill(getpid(), SIGKILL);
+    raise(opt_signal);
+    raise(SIGKILL);
 }
 
 /* Thread that waits for the signal to throw an OOM
  */
 static void JNICALL
-watchdog(jvmtiEnv* jvmti, JNIEnv* jni, void *p) {
+killer_thread(jvmtiEnv* jvmti, JNIEnv* jni, void *p) {
     jvmtiError err;
 
     fprintf(stdout, "JVM Watchdog thread started\n");
@@ -55,29 +55,23 @@ watchdog(jvmtiEnv* jvmti, JNIEnv* jni, void *p) {
         return;
     }
 
-    // If we reach this point and trigger_watchdog is true, then we know that
+    // If we reach this point and trigger_killer is true, then we know that
     // we need to throw an OOM exception
+    //XXX: how would we reach this point without trigger_killer=1?
 
-    if (trigger_watchdog == 1) {
-        if (watchdog_action == OOM) {
-            fprintf(stderr, "JVM Watchdog triggered! Forcing OOM\n");
-            // Force the JVM to run out of memory really quickly
-            for ( ;; ) {
-                // Allocate 8GB blocks until we run out of memory
-                (*jni)->NewLongArray(jni, 1000000000);
-            }
-        } else if (watchdog_action == ABORT) {
-            fprintf(stderr, "JVM Watchdog triggered! Forcing Core Dump\n");
-            abort();
-        } else if (watchdog_action == KILL) {
-            fprintf(stderr, "JVM Watchdog triggered! Killing Process\n");
-            kill(getpid(), SIGKILL);
+    if (trigger_killer == 1) {
+        fprintf(stderr, "JVM Watchdog triggered! Forcing OOM\n");
+        // Force the JVM to run out of memory really quickly
+        for ( ;; ) {
+            // Allocate 8GB blocks until we run out of memory
+            (*jni)->NewLongArray(jni, 1000000000);
         }
     }
+
     // normal exit
 }
 
-/* Creates a Java thread which runs the watchdog */
+/* Creates a Java thread */
 static jthread
 alloc_thread(JNIEnv *env) {
     jclass    thrClass;
@@ -97,15 +91,18 @@ alloc_thread(JNIEnv *env) {
 static void JNICALL
 vm_init(jvmtiEnv *jvmti, JNIEnv *env, jthread thread)
 {
-    jvmtiError err;
+	// We only need to do this when signal==0 (i.e. OOM)
+    if(opt_signal != 0) return;
 
     fprintf(stdout, "JVM Watchdog setting up\n");
 
-    err = (*jvmti)->RunAgentThread(
-        jvmti, alloc_thread(env), &watchdog, NULL, JVMTI_THREAD_MAX_PRIORITY
+    jvmtiError err = (*jvmti)->RunAgentThread(
+        jvmti, alloc_thread(env), &killer_thread, NULL, JVMTI_THREAD_MAX_PRIORITY
     );
-    if (err != JVMTI_ERROR_NONE)
-        return;
+    if (err != JVMTI_ERROR_NONE) {
+        fprintf(stderr, "JVM Watchdog could not execute thread. Exiting.\n");
+        exit(1);
+    }
 }
 
 static void JNICALL
@@ -116,14 +113,11 @@ gcStarted(jvmtiEnv *jvmti)
     long running_nanos = (
         NANOS * (last_start.tv_sec - last_end.tv_sec) +
         (last_start.tv_nsec - last_end.tv_nsec)
-    );
+    ) * opt_runtime_weight;
 
     // Token bucket algorithm
     if (running_nanos > val) { val = 0; }
     else { val -= running_nanos; }
-
-    //fprintf(stderr, "Got a GC Start!\n");
-    //fprintf(stderr, "val %ld\n", val);
 }
 
 static void JNICALL
@@ -131,29 +125,33 @@ gcFinished(jvmtiEnv *jvmti) {
     jvmtiError err;
 
     clock_gettime(CLOCK_MONOTONIC, &last_end);
+
+    // Token bucket algorithm
     long gc_nanos = (
         NANOS * (last_end.tv_sec - last_start.tv_sec) +
         (last_end.tv_nsec - last_start.tv_nsec)
     );
-    //fprintf(stderr, "GC Time: %ld\n", gc_nanos);
-
-    // Token bucket algorithm
     val += gc_nanos;
 
-    if (val > (NANOS * watchdog_gc_seconds)) {
-        // Trigger kill due to excessive GC
-        fprintf(stderr, "Excessive GC: setting flag and notifying!\n");
-        trigger_watchdog = 1;
-        err = (*jvmti)->RawMonitorEnter(jvmti, lock);
-        err = (*jvmti)->RawMonitorNotify(jvmti, lock);
-        err = (*jvmti)->RawMonitorExit(jvmti, lock);
-        if (err != JNI_OK) {
-            fprintf(stderr, "Error exiting monitor");
+    if (val > opt_gc_threshold) {
+        if(opt_signal != 0) {
+            fprintf(stderr, "Excessive GC: sending signal (%d)\n", opt_signal);
+            raise(opt_signal);
+            raise(SIGKILL);
+        } else {
+            // Trigger kill due to excessive GC
+            fprintf(stderr, "Excessive GC: setting flag and notifying!\n");
+            trigger_killer = 1;
+            err = (*jvmti)->RawMonitorEnter(jvmti, lock);
+            err = (*jvmti)->RawMonitorNotify(jvmti, lock);
+            err = (*jvmti)->RawMonitorExit(jvmti, lock);
+            if (err != JNI_OK) {
+                fprintf(stderr, "Error notifying monitor");
+                raise(SIGABRT);
+                raise(SIGKILL);
+            }
         }
     }
-
-    //fprintf(stderr, "Got a GC End! %d\n", err);
-    //fprintf(stderr, "Token %ld\n", val);
 }
 
 // TODO: options support
@@ -164,32 +162,19 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
     jvmtiError err;
 
     // Parse options
-    int opt_gc_seconds = watchdog_gc_seconds;
-    int opt_runtime_weight = watchdog_runtime_weight;
-    char opt_action[5] = "";
-    strncpy(opt_action, action_lookup[watchdog_action], 5);
-    int num_options = 0;
-
-    num_options = sscanf(options, "%5[^,],%d,%d",
-                         opt_action, &opt_gc_seconds, &opt_runtime_weight);
-    if (num_options == 3) {
-        fprintf(stdout, "jvmquake received %d options: %s,%d,%d \n",
-                num_options, opt_action, opt_gc_seconds, opt_runtime_weight);
-        for(int i = 0; i < 3; i++) {
-            if (strcmp(action_lookup[i], opt_action) == 0) {
-                watchdog_action = i;
-            }
-        }
-        watchdog_gc_seconds = opt_gc_seconds;
-        watchdog_runtime_weight = opt_runtime_weight;
+    sscanf(options, "%d,%d,%d", &opt_gc_threshold, &opt_runtime_weight, &opt_signal);
+    if(opt_signal == 0) {
+        fprintf(stderr, "jvmquake using options: threshold=%d seconds,runtime_weight=%d,action=oom\n",
+                opt_gc_threshold, opt_runtime_weight);
     } else {
-        fprintf(stdout, "jvmquake using default options\n");
+        fprintf(stderr, "jvmquake using options: threshold=%d seconds,runtime_weight=%d,action=signal%d\n",
+                opt_gc_threshold, opt_runtime_weight, opt_signal);
     }
+    opt_gc_threshold *= NANOS;
 
     // Initialize global state
     clock_gettime(CLOCK_MONOTONIC, &last_start);
     clock_gettime(CLOCK_MONOTONIC, &last_end);
-	trigger_watchdog = 0;
 
     jint rc = (*vm)->GetEnv(vm, (void **) &jvmti, JVMTI_VERSION);
     if (rc != JNI_OK) {
