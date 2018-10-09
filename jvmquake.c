@@ -91,7 +91,7 @@ alloc_thread(JNIEnv *env) {
 static void JNICALL
 vm_init(jvmtiEnv *jvmti, JNIEnv *env, jthread thread)
 {
-	// We only need to do this when signal==0 (i.e. OOM)
+    // We only need to do this when signal==0 (i.e. OOM)
     if(opt_signal != 0) return;
 
     fprintf(stdout, "JVM Watchdog setting up\n");
@@ -162,13 +162,17 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
     jvmtiError err;
 
     // Parse options
-    sscanf(options, "%d,%d,%d", &opt_gc_threshold, &opt_runtime_weight, &opt_signal);
-    if(opt_signal == 0) {
-        fprintf(stderr, "jvmquake using options: threshold=%d seconds,runtime_weight=%d,action=oom\n",
-                opt_gc_threshold, opt_runtime_weight);
-    } else {
-        fprintf(stderr, "jvmquake using options: threshold=%d seconds,runtime_weight=%d,action=signal%d\n",
-                opt_gc_threshold, opt_runtime_weight, opt_signal);
+    if(options) {
+        sscanf(options, "%d,%d,%d", &opt_gc_threshold, &opt_runtime_weight, &opt_signal);
+        if(opt_signal == 0) {
+            fprintf(stderr,
+                    "jvmquake using options: threshold=%d seconds,runtime_weight=%d,action=oom\n",
+                    opt_gc_threshold, opt_runtime_weight);
+        } else {
+            fprintf(stderr,
+                    "jvmquake using options: threshold=%d seconds,runtime_weight=%d,action=signal%d\n",
+                    opt_gc_threshold, opt_runtime_weight, opt_signal);
+        }
     }
     opt_gc_threshold *= NANOS;
 
@@ -190,8 +194,8 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
     callbacks.GarbageCollectionStart  = &gcStarted;
     callbacks.GarbageCollectionFinish = &gcFinished;
 
-	err = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
-		JVMTI_EVENT_VM_INIT, NULL);
+    err = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
+        JVMTI_EVENT_VM_INIT, NULL);
 
     err = (*jvmti)->SetEventCallbacks(jvmti, &callbacks, sizeof(callbacks));
     if (err != JVMTI_ERROR_NONE) {
