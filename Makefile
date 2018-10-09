@@ -33,7 +33,15 @@ easy_opt: all
 	$(JAVA_HOME)/bin/java -Xmx1m \
 	    -XX:+HeapDumpOnOutOfMemoryError \
 	    -XX:OnOutOfMemoryError='/bin/echo running OnOutOfMemoryError' \
-	    -agentpath:$(PWD)/$(TARGET)=ABORT,10,1 \
+	    -agentpath:$(PWD)/$(TARGET)=10,1,6 \
+	    -cp $(PWD)/tests EasyOOM
+
+easy_opt_oom: all
+	$(JAVA_HOME)/bin/javac tests/EasyOOM.java
+	$(JAVA_HOME)/bin/java -Xmx1m \
+	    -XX:+HeapDumpOnOutOfMemoryError \
+	    -XX:OnOutOfMemoryError='/bin/echo running OnOutOfMemoryError' \
+	    -agentpath:$(PWD)/$(TARGET)=10,1,0 \
 	    -cp $(PWD)/tests EasyOOM
 
 hard: all
@@ -65,5 +73,5 @@ hard_opt: all
 		-XX:+PrintGCApplicationStoppedTime \
 		-XX:+HeapDumpOnOutOfMemoryError \
 		-Xloggc:gclog \
-	    -agentpath:$(PWD)/$(TARGET)=ABORT,1,1 \
+	    -agentpath:$(PWD)/$(TARGET)=1,1,6 \
 	    -cp $(PWD)/tests SlowDeathOOM
