@@ -16,7 +16,7 @@ static unsigned long val;
 static jrawMonitorID lock;
 
 // Defaults
-static int opt_gc_threshold = 30; // seconds
+static int opt_gc_threshold = 30; // seconds, converted to nanos in the init
 // corresponds to a thoughput of 1/(5+1) == 16.666%
 static int opt_runtime_weight = 5;
 // trigger an OOM
@@ -27,8 +27,8 @@ static short trigger_killer = 0;
 
 // On OOM, kill the process. This happens after the HeapDumpOnOutOfMemory
 static void JNICALL
-resourceExhausted(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jint flags,
-                  const void *reserved, const char *description) {
+resource_exhausted(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jint flags,
+                   const void *reserved, const char *description) {
     // TODO: Write to a file somewhere that the watchdog took action and why
     // e.g. if it was for excessive GC or OOM or what
     fprintf(stderr,
@@ -106,7 +106,7 @@ vm_init(jvmtiEnv *jvmti, JNIEnv *env, jthread thread)
 }
 
 static void JNICALL
-gcStarted(jvmtiEnv *jvmti)
+gc_start(jvmtiEnv *jvmti)
 {
     clock_gettime(CLOCK_MONOTONIC, &last_start);
 
@@ -121,7 +121,7 @@ gcStarted(jvmtiEnv *jvmti)
 }
 
 static void JNICALL
-gcFinished(jvmtiEnv *jvmti) {
+gc_finished(jvmtiEnv *jvmti) {
     jvmtiError err;
 
     clock_gettime(CLOCK_MONOTONIC, &last_end);
@@ -174,6 +174,7 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
                     opt_gc_threshold, opt_runtime_weight, opt_signal);
         }
     }
+
     opt_gc_threshold *= NANOS;
 
     // Initialize global state
@@ -190,9 +191,9 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
     memset(&callbacks, 0, sizeof(callbacks));
 
     callbacks.VMInit                  = &vm_init;
-    callbacks.ResourceExhausted       = &resourceExhausted;
-    callbacks.GarbageCollectionStart  = &gcStarted;
-    callbacks.GarbageCollectionFinish = &gcFinished;
+    callbacks.ResourceExhausted       = &resource_exhausted;
+    callbacks.GarbageCollectionStart  = &gc_start;
+    callbacks.GarbageCollectionFinish = &gc_finished;
 
     err = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
         JVMTI_EVENT_VM_INIT, NULL);
