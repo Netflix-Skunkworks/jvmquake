@@ -18,6 +18,7 @@ clean:
 	rm -f *.class
 	rm -f *.hprof
 	rm -f core
+	rm -f gclog
 	rm -f tests/*.class
 
 easy: all
@@ -27,6 +28,15 @@ easy: all
 	    -XX:OnOutOfMemoryError='/bin/echo running OnOutOfMemoryError' \
 	    -agentpath:$(PWD)/$(TARGET) \
 	    -cp $(PWD)/tests EasyOOM
+
+easy_thread: all
+	$(JAVA_HOME)/bin/javac tests/EasyThreadOOM.java
+	$(JAVA_HOME)/bin/java -Xmx1m \
+	    -XX:+HeapDumpOnOutOfMemoryError \
+		-Xmx100m \
+	    -XX:OnOutOfMemoryError='/bin/echo running OnOutOfMemoryError' \
+	    -agentpath:$(PWD)/$(TARGET) \
+	    -cp $(PWD)/tests EasyThreadOOM
 
 easy_opt: all
 	$(JAVA_HOME)/bin/javac tests/EasyOOM.java
