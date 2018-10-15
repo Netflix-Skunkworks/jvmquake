@@ -24,7 +24,7 @@ def core_ulimit():
     resource.setrlimit(resource.RLIMIT_CORE, (x, y))
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture()
 def thread_ulimit():
     import resource
     (x, y) = resource.getrlimit(resource.RLIMIT_NPROC)
@@ -97,7 +97,7 @@ def test_jvmquake_coredump_oom(core_ulimit):
         cleanup(*files)
 
 
-def test_jvmquake_thread_oom(thread_ulimit):
+def xtest_jvmquake_thread_oom():
     """
     Executes a program which runs out of memory through lots of Thread
     allocations
