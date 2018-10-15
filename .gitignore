@@ -62,3 +62,7 @@ dkms.conf
 *.class
 *.hprof
 gclog
+
+# Python test stuff
+.tox
+*__pycache__

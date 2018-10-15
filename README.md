@@ -142,13 +142,17 @@ make JAVA_HOME=/path/to/jvm
 ```
 
 # Testing
-```bash
-# Test out an easy OOM condition
-make easy
+`jvmquake` comes with a test suite of OOM conditions (running out of memory,
+threads, gcing too much, etc) which you can run if you have `tox` and
+`python3` available:
 
-# Test out a complicated OOM condition
-make hard
+```bash
+# Run the test suite which uses tox, pytest, and plumbum under the hood
+# to run jvmquake through numerous difficult failure modes
+make test
 ```
+
+Coming soon: A test suite showing that the JVM options don't work.
 
 # Using
 Once you've got the agent built, to use it just run your java program

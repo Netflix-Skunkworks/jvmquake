@@ -20,14 +20,12 @@ clean:
 	rm -f core
 	rm -f gclog
 	rm -f tests/*.class
+	rm -rf tests/__pycache__
+	rm -rf .tox
 
-easy: all
-	$(JAVA_HOME)/bin/javac tests/EasyOOM.java
-	$(JAVA_HOME)/bin/java -Xmx1m \
-	    -XX:+HeapDumpOnOutOfMemoryError \
-	    -XX:OnOutOfMemoryError='/bin/echo running OnOutOfMemoryError' \
-	    -agentpath:$(PWD)/$(TARGET) \
-	    -cp $(PWD)/tests EasyOOM
+test: all
+	${JAVA_HOME}/bin/javac tests/*.java
+	tox
 
 easy_thread: all
 	$(JAVA_HOME)/bin/javac tests/EasyThreadOOM.java
