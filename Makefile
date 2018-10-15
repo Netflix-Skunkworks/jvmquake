@@ -19,6 +19,7 @@ clean:
 	rm -f *.hprof
 	rm -f core
 	rm -f gclog
+	rm -f *.ran
 	rm -f tests/*.class
 	rm -rf tests/__pycache__
 	rm -rf .tox
