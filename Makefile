@@ -28,6 +28,10 @@ test: all
 	${JAVA_HOME}/bin/javac tests/*.java
 	tox
 
+docker:
+	docker build . -t jolynch/jvmquake:test
+	docker run jolynch/jvmquake:test
+
 easy_thread: all
 	$(JAVA_HOME)/bin/javac tests/EasyThreadOOM.java
 	$(JAVA_HOME)/bin/java -Xmx1m \

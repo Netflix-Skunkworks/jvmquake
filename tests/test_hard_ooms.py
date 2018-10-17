@@ -6,8 +6,10 @@ from plumbum import local, BG
 import pytest
 
 
-java_home=os.environ.get('JAVA_HOME')
-java_cmd = local["{0}/bin/java".format(java_home)]
+CHECK_CORES = os.environ.get('CHECK_CORES', '') != ''
+JAVA_HOME=os.environ.get('JAVA_HOME')
+assert JAVA_HOME != None
+java_cmd = local["{0}/bin/java".format(JAVA_HOME)]
 agent_path = "-agentpath:{0}/libjvmquake.so".format(os.getcwd())
 class_path = "{0}/tests".format(os.getcwd())
 
@@ -98,7 +100,14 @@ def test_jvmquake_cms_slow_death_core(core_ulimit):
     gclog_path = Path.cwd().joinpath('gclog')
     core_path = Path.cwd().joinpath('core')
 
-    files = (gclog_path, core_path)
+    files = [gclog_path]
+    # So ... core files are apparently super annoying to reliably generate
+    # in Docker (or really on any system you don't control the value of
+    # /proc/sys/kernel/core_pattern ) So we don't check it by default
+    # set the CHECK_CORES env variable to test this too
+    if CHECK_CORES:
+        files.append(core_path)
+
     try:
         assert_files(*files)
         assert not heapdump_path.is_file()
