@@ -154,6 +154,12 @@ threads, gcing too much, etc) which you can run if you have `tox` and
 make test
 ```
 
+If you have docker you can also run the tests with that
+```bash
+# Run the test suite via Docker
+make docker
+```
+
 Coming soon: A test suite showing that the JVM options don't work.
 
 # Using

@@ -73,6 +73,7 @@ def test_jvmquake_normal_oom():
     finally:
         cleanup(*files)
 
+
 def test_jvmquake_coredump_oom(core_ulimit):
     """
     Executes a program which runs out of memory through native allocations
@@ -99,6 +100,33 @@ def test_jvmquake_coredump_oom(core_ulimit):
     # set the CHECK_CORES env variable to test this too
     if CHECK_CORES:
         files.append(core_path)
+
+    try:
+        assert_files(*files)
+    finally:
+        cleanup(*files)
+
+
+def test_jvmquake_forced_oom(core_ulimit):
+    """
+    Executes a program which runs out of memory through native allocations
+    and ensures that we properly parse the "0" option
+    """
+    easy_oom = java_cmd[
+        '-Xmx10m',
+        '-XX:+HeapDumpOnOutOfMemoryError',
+        agent_path + "=10,1,0",
+        '-cp', class_path,
+        'EasyOOM'
+    ]
+    print("Executing simple OOM causing core dump")
+    print("[{0}]".format(easy_oom))
+    with easy_oom.bgrun(retcode=-9, timeout=10) as proc:
+        pid = proc.pid
+
+    heapdump_path = Path.cwd().joinpath("java_pid{0}.hprof".format(pid))
+
+    files = [heapdump_path]
 
     try:
         assert_files(*files)
