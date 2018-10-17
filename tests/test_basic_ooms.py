@@ -30,7 +30,7 @@ def thread_ulimit():
     (x, y) = resource.getrlimit(resource.RLIMIT_NPROC)
     resource.setrlimit(
         resource.RLIMIT_NPROC,
-        (1000, 1000)
+        (x - 1000, y)
     )
     yield
     resource.setrlimit(resource.RLIMIT_NPROC, (x, y))
@@ -97,7 +97,7 @@ def test_jvmquake_coredump_oom(core_ulimit):
         cleanup(*files)
 
 
-def xtest_jvmquake_thread_oom():
+def test_jvmquake_thread_oom(thread_ulimit):
     """
     Executes a program which runs out of memory through lots of Thread
     allocations
@@ -109,7 +109,7 @@ def xtest_jvmquake_thread_oom():
         '-cp', class_path,
         'EasyThreadOOM'
     ]
-
     print("Executing thread OOM")
     print("[{0}]".format(thread_oom))
-    thread_oom.run(retcode=-9, timeout=10)
+    (_, stdout, stderr) = thread_oom.run(retcode=-9, timeout=10)
+    assert "unable to create new native thread" in stderr
