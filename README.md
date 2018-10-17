@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/jolynch/jvmquake.svg?branch=master)](https://travis-ci.org/jolynch/jvmquake)
+
 # `jvmquake`
 A JVMTI agent that attaches to your JVM and automatically signals and kills it
 when the program has become unstable.
