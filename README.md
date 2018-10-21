@@ -9,7 +9,7 @@ The name comes from "jvm earth`quake`" (a play itself on hotspot).
 This project is heavily inspired by [`airlift/jvmkill`](https://github.com/airlift/jvmkill)
 written by `David Phillips <david@acz.org>` but adds the additional innovation of
 a GC instability detection algorithm for when a JVM is unstable but not quite
-dead yet.
+dead yet (aka "GC spirals of death").
 
 **NOT PRODUCTION READY**
 I still have a number of todos to do before this is production ready, I'd
@@ -22,18 +22,22 @@ Todos:
 * Documentation (almost done)
 * Error handling (next)
 
+If you're not interested in why this is a good idea, head straight to
+[Building and Usage](#building-and-usage) for how to build and use this agent.
+
 # Motivation
 Java Applications, especially databases such as Elasticsearch and Cassandra
-frequently enter GC spirals of death, either resulting in OOM or Concurrent
-mode failures (aka "CMF" per CMS parlance although G1 has similar issues with
-frequent mixed mode collections). Concurrent mode failures, when the old gen
-collector is running frequently expending a lot of CPU resources but is still
-able to reclaim enough memory so that the application does not cause a full
-OOM, are particularly pernicious as they appear as 10-30s "partitions" (shorter
-if your heap is smaller, longer if thye heap is larger) and then heal, and then
-partition, and then heal, etc ... This repeated partitioning causes great
-confusion for distributed JVM based applications and especially databases.  The
-JVM has various flags to try to address these issues:
+frequently enter GC spirals of death, either resulting in eventual OOM or
+Concurrent mode failures (aka "CMF" per CMS parlance although G1 has similar
+issues with frequent mixed mode collections). Concurrent mode failures, when
+the old gen collector is running frequently expending a lot of CPU resources
+but is still able to reclaim enough memory so that the application does not
+cause a full OOM, are particularly pernicious as they appear as 10-30s
+"partitions" (shorter if your heap is smaller, longer if thye heap is larger)
+and then heal, and then partition, and then heal, etc ... This repeated
+partitioning causes great confusion for distributed JVM based applications and
+especially databases.  The JVM has various flags to try to address these
+issues:
 
 * `OnOutOfMemoryError`: Commonly used with `kill -9 %p`. This options sometimes
 works but most often results in no action, especially when the JVM is out of
@@ -130,50 +134,45 @@ def on_gc_end()
         take_action()
 ```
 
-# Building
+# Building and Usage
+As `jvmquake` is a JVMTI c agent (so that it lives outside the heap and cannot
+be affected by GC behavior), you must compile it before using it against
+your JVM. You can either do this on the machine running the Java project or
+externaly either in a debian package or as part of packaging the JVM itself.
+
 ```bash
-# Ensure that JAVA_HOME is pointing to the JVM you want to build for and run
-
-make
-
-# Or you can run make with the JAVA_HOME specified manually
+# Compile jvmquake against the JVM the application is using. If you do not
+# provide the path, the environment variable JAVA_HOME is used instead
 
 make JAVA_HOME=/path/to/jvm
-
-# Now the agent is available at libjvmquake.so
 ```
 
-# Testing
-`jvmquake` comes with a test suite of OOM conditions (running out of memory,
-threads, gcing too much, etc) which you can run if you have `tox` and
-`python3` available:
+For example if the Oracle Java 8 JVM is located at `/usr/lib/jvm/java-8-oracle`:
 
 ```bash
-# Run the test suite which uses tox, pytest, and plumbum under the hood
-# to run jvmquake through numerous difficult failure modes
-make test
+make JAVA_HOME=/usr/lib/jvm/java-8-oracle
 ```
 
-If you have docker you can also run the tests with that
-```bash
-# Run the test suite via Docker
-make docker
+The agent is now available as `libjvmquake.so`.
+
+## How to Use the Agent
+Once you have the agent built, to use it just run your java program with
+`agentpath` or `agentlib`.
+
+```
+java -agentpath:/path/to/libjvmquake.so <your java program here>
 ```
 
-Coming soon: A test suite showing that the JVM options don't work.
+The default settings are 30 seconds of GC deficit with a 1:5 gc:running time
+weight, and the default action is to trigger an in JVM OOM. These defaults
+are reasonable for a latency critical java application.
 
-# Using
-Once you've got the agent built, to use it just run your java program
-with `agentpath` or `agentlib`.
+If you want different settings you can pass options per the
+[option specification](#knobs-and-options).
 
 ```
 java -agentpath:/path/to/libjvmquake.so=<options> <your java program here>
 ```
-
-Options should conform to the [option specification](#knobs-and-options). The
-defaults are a 30 second GC deficit must accumulate with a 1:5 gc:running time
-weight (so we must GC 5 times as much as we run before we accumulate GC
-deficit).
 
 Some examples:
 
@@ -204,3 +203,22 @@ deficit where running time is 10:1 weighted to gc time:
 ```
 java -agentpath:/path/to/libjvmquake.so=60,10,0 <your java program here>
 ```
+
+# Testing
+`jvmquake` comes with a test suite of OOM conditions (running out of memory,
+threads, gcing too much, etc) which you can run if you have `tox` and
+`python3` available:
+
+```bash
+# Run the test suite which uses tox, pytest, and plumbum under the hood
+# to run jvmquake through numerous difficult failure modes
+make test
+```
+
+If you have docker you can also run the tests with that
+```bash
+# Run the test suite via Docker
+make docker
+```
+
+Coming soon: A test suite showing that the JVM options don't work.
