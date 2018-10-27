@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <sys/types.h>
 #include <signal.h>
 #include <stdio.h>
@@ -10,27 +11,36 @@
 #include <jvmti.h>
 
 #define NANOS 1000000000L
+#define KILL 0x01
 
 static struct timespec last_start, last_end;
 static unsigned long val;
 static jrawMonitorID lock;
 
 // Defaults
-static int opt_gc_threshold = 30; // seconds, converted to nanos in the init
+static long opt_gc_threshold = 30; // seconds, converted to nanos in the init
 // corresponds to a thoughput of 1/(5+1) == 16.666%
-static int opt_runtime_weight = 5;
+static long opt_runtime_weight = 5;
 // trigger an OOM
 static int opt_signal = 0;
 
 // Signal variable that the watchdog should trigger an action
 static short trigger_killer = 0;
 
+void
+error_check(jvmtiError code, const char *msg)
+{
+    if (code != JVMTI_ERROR_NONE) {
+        fprintf(stderr, "(jvmquake) ERROR [%d], triggering abort: %s.\n", code, msg);
+        raise(SIGABRT);
+        raise(SIGKILL);
+    }
+}
+
 // On OOM, kill the process. This happens after the HeapDumpOnOutOfMemory
 static void JNICALL
 resource_exhausted(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jint flags,
                    const void *reserved, const char *description) {
-    // TODO: Write to a file somewhere that the watchdog took action and why
-    // e.g. if it was for excessive GC or OOM or what
     fprintf(stderr,
             "ResourceExhausted: %s: killing current process!\n", description);
     raise(opt_signal);
@@ -38,37 +48,36 @@ resource_exhausted(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jint flags,
 }
 
 /* Thread that waits for the signal to throw an OOM
+ *
+ * We need a thread here because the only way to reliably trigger OutOfMemory
+ * when we are not actually out of memory (e.g. due to GC behavior) that I
+ * could find was to make JNI calls that allocate large blobs of memory which
+ * can only be done from outside of the GC callbacks.
  */
 static void JNICALL
 killer_thread(jvmtiEnv* jvmti, JNIEnv* jni, void *p) {
     jvmtiError err;
 
-    fprintf(stdout, "JVM Watchdog thread started\n");
+    fprintf(stdout, "(jvmquake) OOM killer thread started\n");
 
-    // TODO: Error handling
     err = (*jvmti)->RawMonitorEnter(jvmti, lock);
+    error_check(err, "killer thread could not enter lock");
     err = (*jvmti)->RawMonitorWait(jvmti, lock, 0);
-
-    (*jvmti)->RawMonitorExit(jvmti, lock);
-    // If we can't wait on the lock something has gone wrong ...
-    if (err != JVMTI_ERROR_NONE) {
-        return;
-    }
+    error_check(err, "killer thread could not wait on lock");
+    err = (*jvmti)->RawMonitorExit(jvmti, lock);
+    error_check(err, "killer thread could not exit from waiting on lock");
 
     // If we reach this point and trigger_killer is true, then we know that
-    // we need to throw an OOM exception
-    //XXX: how would we reach this point without trigger_killer=1?
+    // we need to throw an OOM exception ... which should always be true
 
-    if (trigger_killer == 1) {
-        fprintf(stderr, "JVM Watchdog triggered! Forcing OOM\n");
+    if ((trigger_killer & KILL) == KILL) {
+        fprintf(stderr, "(jvmquake) killer thread triggered! Forcing OOM\n");
         // Force the JVM to run out of memory really quickly
         for ( ;; ) {
-            // Allocate 8GB blocks until we run out of memory
-            (*jni)->NewLongArray(jni, 1000000000);
+            // Allocate 16GB blocks until we run out of memory
+            (*jni)->NewLongArray(jni, INT_MAX);
         }
     }
-
-    // normal exit
 }
 
 /* Creates a Java thread */
@@ -78,7 +87,6 @@ alloc_thread(JNIEnv *env) {
     jmethodID cid;
     jthread   res;
 
-    // TODO: Error handling
     thrClass = (*env)->FindClass(env, "java/lang/Thread");
     cid      = (*env)->GetMethodID(env, thrClass, "<init>", "()V");
     res      = (*env)->NewObject(env, thrClass, cid);
@@ -91,18 +99,16 @@ alloc_thread(JNIEnv *env) {
 static void JNICALL
 vm_init(jvmtiEnv *jvmti, JNIEnv *env, jthread thread)
 {
-    // We only need to do this when signal==0 (i.e. OOM)
-    if(opt_signal != 0) return;
+    // We only need to do set up a killer thread when signal==0 (i.e. OOM)
+    if(opt_signal != 0)
+        return;
 
-    fprintf(stdout, "JVM Watchdog setting up\n");
+    fprintf(stdout, "(jvmquake) setting up watchdog OOM killer thread\n");
 
     jvmtiError err = (*jvmti)->RunAgentThread(
         jvmti, alloc_thread(env), &killer_thread, NULL, JVMTI_THREAD_MAX_PRIORITY
     );
-    if (err != JVMTI_ERROR_NONE) {
-        fprintf(stderr, "JVM Watchdog could not execute thread. Exiting.\n");
-        exit(1);
-    }
+    error_check(err, "Could not allocate killer thread");
 }
 
 static void JNICALL
@@ -133,46 +139,43 @@ gc_finished(jvmtiEnv *jvmti) {
     );
     val += gc_nanos;
 
+    // Trigger kill due to excessive GC
     if (val > opt_gc_threshold) {
-        if(opt_signal != 0) {
-            fprintf(stderr, "Excessive GC: sending signal (%d)\n", opt_signal);
+        if (opt_signal != 0) {
+            fprintf(stderr, "(jvmquake) Excessive GC: sending signal (%d)\n", opt_signal);
             raise(opt_signal);
             raise(SIGKILL);
         } else {
-            // Trigger kill due to excessive GC
-            fprintf(stderr, "Excessive GC: setting flag and notifying!\n");
-            trigger_killer = 1;
+            fprintf(stderr, "(jvmquake) Excessive GC: notifying killer thread to trigger OOM\n");
+            trigger_killer = KILL;
             err = (*jvmti)->RawMonitorEnter(jvmti, lock);
+            error_check(err, "Failed to notify killer thread");
             err = (*jvmti)->RawMonitorNotify(jvmti, lock);
+            error_check(err, "Failed to notify killer thread");
             err = (*jvmti)->RawMonitorExit(jvmti, lock);
-            if (err != JNI_OK) {
-                fprintf(stderr, "Error notifying monitor");
-                raise(SIGABRT);
-                raise(SIGKILL);
-            }
+            error_check(err, "Failed to notify killer thread");
         }
     }
 }
 
-// TODO: options support
 JNIEXPORT jint JNICALL
 Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
 {
     jvmtiEnv *jvmti;
     jvmtiError err;
 
-    // Parse options
-    if(options) {
-        sscanf(options, "%d,%d,%d", &opt_gc_threshold, &opt_runtime_weight, &opt_signal);
-        if(opt_signal == 0) {
-            fprintf(stderr,
-                    "jvmquake using options: threshold=%d seconds,runtime_weight=%d,action=oom\n",
-                    opt_gc_threshold, opt_runtime_weight);
-        } else {
-            fprintf(stderr,
-                    "jvmquake using options: threshold=%d seconds,runtime_weight=%d,action=signal%d\n",
-                    opt_gc_threshold, opt_runtime_weight, opt_signal);
-        }
+    if (options) {
+        sscanf(options, "%ld,%ld,%d", &opt_gc_threshold, &opt_runtime_weight, &opt_signal);
+    }
+
+    if (opt_signal == 0) {
+        fprintf(stderr,
+                "(jvmquake) using options: threshold=%ld seconds,runtime_weight=%ld:1,action=oom\n",
+                opt_gc_threshold, opt_runtime_weight);
+    } else {
+        fprintf(stderr,
+                "(jvmquake) using options: threshold=%ld seconds,runtime_weight=%ld:1,action=signal%d\n",
+                opt_gc_threshold, opt_runtime_weight, opt_signal);
     }
 
     opt_gc_threshold *= NANOS;
@@ -195,21 +198,15 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
     callbacks.GarbageCollectionStart  = &gc_start;
     callbacks.GarbageCollectionFinish = &gc_finished;
 
-    err = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE,
-        JVMTI_EVENT_VM_INIT, NULL);
+    err = (*jvmti)->SetEventNotificationMode(jvmti, JVMTI_ENABLE, JVMTI_EVENT_VM_INIT, NULL);
+    error_check(err, "SetEventNotificationMode VM Init failed");
 
     err = (*jvmti)->SetEventCallbacks(jvmti, &callbacks, sizeof(callbacks));
-    if (err != JVMTI_ERROR_NONE) {
-       fprintf(stderr, "ERROR: SetEventCallbacks failed: %d\n", err);
-       return JNI_ERR;
-    }
+    error_check(err, "SetEventCallbacks failed to register callbacks");
 
     err = (*jvmti)->SetEventNotificationMode(
           jvmti, JVMTI_ENABLE, JVMTI_EVENT_RESOURCE_EXHAUSTED, NULL);
-    if (err != JVMTI_ERROR_NONE) {
-       fprintf(stderr, "ERROR: SetEventNotificationMode failed: %d\n", err);
-       return JNI_ERR;
-   }
+    error_check(err, "SetEventNotificationMode Resource Exhausted failed");
 
     // Ask for ability to get GC events, this way we can calculate a
     // token bucket of how much time we spend garbage collecting
@@ -217,21 +214,20 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
     (void)memset(&capabilities, 0, sizeof(capabilities));
     capabilities.can_generate_garbage_collection_events = 1;
     err = (*jvmti)->AddCapabilities(jvmti, &capabilities);
+    error_check(err, "Could not add capabilities for GC events");
 
     err = (*jvmti)->SetEventNotificationMode(
           jvmti, JVMTI_ENABLE, JVMTI_EVENT_GARBAGE_COLLECTION_START, NULL);
-    if (err != JVMTI_ERROR_NONE) {
-       fprintf(stderr, "ERROR: SetEventNotificationMode GC Start failed: %d\n", err);
-       return JNI_ERR;
-    }
+    error_check(err, "SetEventNotificationMode GC Start failed");
 
     err = (*jvmti)->SetEventNotificationMode(
           jvmti, JVMTI_ENABLE, JVMTI_EVENT_GARBAGE_COLLECTION_FINISH, NULL);
-    if (err != JVMTI_ERROR_NONE) {
-       fprintf(stderr, "ERROR: SetEventNotificationMode GC End failed: %d\n", err);
-       return JNI_ERR;
-    }
+    error_check(err, "SetEventNotificationMode GC End failed");
 
     err = (*jvmti)->CreateRawMonitor(jvmti, "lock", &lock);
+    error_check(err, "Could not create lock for killer thread");
+
     return JNI_OK;
 }
+
+

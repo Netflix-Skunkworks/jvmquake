@@ -18,9 +18,6 @@ strongly recommend against using it at this stage
 Todos:
 
 * Thorough testing (in progress)
-* Configuration options on the algorithm (in progress)
-* Documentation (almost done)
-* Error handling (next)
 
 If you're not interested in why this is a good idea, head straight to
 [Building and Usage](#building-and-usage) for how to build and use this agent.

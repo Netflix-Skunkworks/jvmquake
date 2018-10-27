@@ -19,14 +19,17 @@ public final class SlowDeathOOM
     @SuppressWarnings("InfiniteLoopStatement")
     public static void main(String[] args)
     {
-        System.out.println("triggering OutOfMemory...");
         List<Object> list = new ArrayList<>();
+        double cmfZone = 0.85 * Runtime.getRuntime().maxMemory();
+        System.out.println(String.format(
+            "triggering OutOfMemory by allocating %.2f bytes",
+            cmfZone
+        ));
         try {
             while (true) {
                 byte[] bytes = new byte[1024 * 1024];
                 list.add(bytes);
-                //System.out.println("list size: " + list.size());
-                if (list.size() > 80)
+                if ((double)(list.size() * 1024*1024) > cmfZone)
                     list.remove(0);
             }
         }
