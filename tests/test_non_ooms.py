@@ -1,13 +1,6 @@
 import os
 
-from plumbum import local, BG
-
-
-JAVA_HOME=os.environ.get('JAVA_HOME')
-assert JAVA_HOME != None
-java_cmd = local["{0}/bin/java".format(JAVA_HOME)]
-agent_path = "-agentpath:{0}/libjvmquake.so".format(os.getcwd())
-class_path = "{0}/tests".format(os.getcwd())
+from environment import *
 
 
 def test_jvmquake_healthy_jvm():
