@@ -27,9 +27,9 @@ public final class SlowDeathOOM
         ));
         try {
             while (true) {
-                byte[] bytes = new byte[1024];
+                byte[] bytes = new byte[8096];
                 list.add(bytes);
-                if ((double)(list.size() * 1024) > cmfZone)
+                if ((double)(list.size() * 8096) > cmfZone)
                     list.remove(0);
             }
         }
