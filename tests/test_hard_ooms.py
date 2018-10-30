@@ -6,7 +6,7 @@ from environment import *
 def test_jvmquake_cms_slow_death_oom():
     """
     Executes a program which over time does way more GC than actual execution
-    We use the zero option to indicate to jvmkill to trigger a java level
+    We use the zero option to indicate to jvmquake to trigger a java level
     OOM and cause a heap dump.
     """
 
@@ -28,6 +28,41 @@ def test_jvmquake_cms_slow_death_oom():
     print("Executing Complex CMS Slow Death OOM")
     print("[{0}]".format(cms_slow_death))
     with cms_slow_death.bgrun(retcode=-9, timeout=10) as proc:
+        pid = proc.pid
+
+    heapdump_path = Path.cwd().joinpath("java_pid{0}.hprof".format(pid))
+    gclog_path = Path.cwd().joinpath('gclog')
+
+    files = (heapdump_path, gclog_path)
+    try:
+        assert_files(*files)
+    finally:
+        cleanup(*files)
+
+
+def test_jvmquake_g1_slow_death_oom():
+    """
+    Executes a program which over time does way more GC than actual execution
+    We use the zero option to indicate to jvmquake to trigger a java level
+    OOM and cause a heap dump.
+    """
+
+    g1_slow_death = java_cmd[
+        '-Xmx100m',
+        '-XX:+HeapDumpOnOutOfMemoryError',
+        '-XX:+UseG1GC',
+        '-XX:+PrintGCDetails',
+        '-XX:+PrintGCDateStamps',
+        '-XX:+PrintGCApplicationConcurrentTime',
+        '-XX:+PrintGCApplicationStoppedTime',
+        '-Xloggc:gclog',
+        agent_path + "=1,1,0",
+        '-cp', class_path,
+        'SlowDeathOOM'
+    ]
+    print("Executing Complex G1GC Slow Death OOM")
+    print("[{0}]".format(g1_slow_death))
+    with g1_slow_death.bgrun(retcode=-9, timeout=10) as proc:
         pid = proc.pid
 
     heapdump_path = Path.cwd().joinpath("java_pid{0}.hprof".format(pid))

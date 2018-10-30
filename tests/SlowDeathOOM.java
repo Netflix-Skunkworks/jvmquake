@@ -20,16 +20,16 @@ public final class SlowDeathOOM
     public static void main(String[] args)
     {
         List<Object> list = new ArrayList<>();
-        double cmfZone = 0.85 * Runtime.getRuntime().maxMemory();
+        double cmfZone = 0.80 * Runtime.getRuntime().maxMemory();
         System.out.println(String.format(
             "triggering OutOfMemory by allocating %.2f bytes",
             cmfZone
         ));
         try {
             while (true) {
-                byte[] bytes = new byte[1024 * 1024];
+                byte[] bytes = new byte[1024];
                 list.add(bytes);
-                if ((double)(list.size() * 1024*1024) > cmfZone)
+                if ((double)(list.size() * 1024) > cmfZone)
                     list.remove(0);
             }
         }

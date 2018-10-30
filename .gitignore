@@ -66,3 +66,4 @@ gclog
 # Python test stuff
 .tox
 *__pycache__
+*.pyc
