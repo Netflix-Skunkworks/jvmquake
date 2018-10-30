@@ -27,13 +27,13 @@ clean:
 	rm -rf tests/__pycache__
 	rm -rf .tox
 
-test: all java_test_targets
+test_jvmquake: all java_test_targets
 	tox -e test
 
 test_jvm: all java_test_targets
 	tox -e test_jvm
 
-test_all: all java_test_targets test test_jvm
+test: all java_test_targets test_jvmquake test_jvm
 
 docker:
 	docker build . -t jolynch/jvmquake:test

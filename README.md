@@ -11,13 +11,10 @@ written by `David Phillips <david@acz.org>` but adds the additional innovation o
 a GC instability detection algorithm for when a JVM is unstable but not quite
 dead yet (aka "GC spirals of death").
 
-**NOT PRODUCTION READY**
-I still have a number of todos to do before this is production ready, I'd
-strongly recommend against using it at this stage
-
-Todos:
-
-* Thorough testing (in progress)
+**Beta Quality**
+At this point I have written a thorough test suite, added error handling
+everywhere, and have demonstrated this tool superior to the built in JVM
+options. I am now testing this software in our production applications.
 
 If you're not interested in why this is a good idea, head straight to
 [Building and Usage](#building-and-usage) for how to build and use this agent.
