@@ -18,11 +18,11 @@ static unsigned long val;
 static jrawMonitorID lock;
 
 // Defaults
-static long opt_gc_threshold = 30; // seconds, converted to nanos in the init
+static unsigned long opt_gc_threshold = 30; // seconds, converted to nanos in the init
 // corresponds to a thoughput of 1/(5+1) == 16.666%
-static long opt_runtime_weight = 5;
+static unsigned long opt_runtime_weight = 5;
 // trigger an OOM
-static int opt_signal = 0;
+static unsigned int opt_signal = 0;
 
 // Signal variable that the watchdog should trigger an action
 static short trigger_killer = 0;
@@ -116,7 +116,7 @@ gc_start(jvmtiEnv *jvmti)
 {
     clock_gettime(CLOCK_MONOTONIC, &last_start);
 
-    long running_nanos = (
+    unsigned long running_nanos = (
         NANOS * (last_start.tv_sec - last_end.tv_sec) +
         (last_start.tv_nsec - last_end.tv_nsec)
     ) * opt_runtime_weight;
@@ -133,7 +133,7 @@ gc_finished(jvmtiEnv *jvmti) {
     clock_gettime(CLOCK_MONOTONIC, &last_end);
 
     // Token bucket algorithm
-    long gc_nanos = (
+    unsigned long gc_nanos = (
         NANOS * (last_end.tv_sec - last_start.tv_sec) +
         (last_end.tv_nsec - last_start.tv_nsec)
     );
