@@ -21,17 +21,24 @@ If you're not interested in why this is a good idea, head straight to
 
 # Motivation
 Java Applications, especially databases such as Elasticsearch and Cassandra
-frequently enter GC spirals of death, either resulting in eventual OOM or
-Concurrent mode failures (aka "CMF" per CMS parlance although G1 has similar
+can easily enter GC spirals of death, either resulting in eventual OOM or
+Concurrent Mode Failures (aka "CMF" per CMS parlance although G1 has similar
 issues with frequent mixed mode collections). Concurrent mode failures, when
 the old gen collector is running frequently expending a lot of CPU resources
 but is still able to reclaim enough memory so that the application does not
 cause a full OOM, are particularly pernicious as they appear as 10-30s
-"partitions" (shorter if your heap is smaller, longer if thye heap is larger)
-and then heal, and then partition, and then heal, etc ... This repeated
-partitioning causes great confusion for distributed JVM based applications and
-especially databases.  The JVM has various flags to try to address these
-issues:
+"partitions" (duration is proportional to heap size) which repeatedly form
+and heal ...
+
+This grey failure mode *wreaks havoc* on distributed systems. In the case of
+databases it can lead to degraded performance or even data corruption.  General
+jvm applications that use distributed locks to enter a critical section may
+make incorrect decisions under the assumption they have a lock when they in
+fact do not (e.g. if the application pauses for 40s and then continues
+executing assuming it still held a lock in Zookeeper).
+
+As pathological heap situations are so problematic, the JVM has various flags
+to try to address these issues:
 
 * `OnOutOfMemoryError`: Commonly used with `kill -9 %p`. This options sometimes
 works but most often results in no action, especially when the JVM is out of
