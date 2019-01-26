@@ -3,7 +3,7 @@ ifndef JAVA_HOME
 endif
 
 INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
-CFLAGS=-Wall -Werror -fPIC -shared $(INCLUDE)
+CFLAGS=-Wall -Werror -fPIC -shared $(INCLUDE) -lrt
 
 TARGET=libjvmquake.so
 
@@ -36,5 +36,6 @@ test_jvm: all java_test_targets
 test: all java_test_targets test_jvmquake test_jvm
 
 docker:
-	docker build . -t jolynch/jvmquake:test
-	docker run jolynch/jvmquake:test
+	docker build -f dockerfiles/Dockerfile.bionic . -t jolynch/jvmquake:test_bionic
+	docker build -f dockerfiles/Dockerfile.xenial . -t jolynch/jvmquake:test_xenial
+	docker run jolynch/jvmquake:test_bionic && docker run jolynch/jvmquake:test_xenial

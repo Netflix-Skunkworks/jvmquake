@@ -5,8 +5,9 @@ services:
   - docker
 
 before_install:
-  - docker build . -t jolynch/jvmquake:test
+  - docker build -f dockerfiles/Dockerfile.bionic . -t jolynch/jvmquake:test_bionic
+  - docker build -f dockerfiles/Dockerfile.xenial . -t jolynch/jvmquake:test_xenial
 
 script:
-  - docker run jolynch/jvmquake:test 
+  - docker run jolynch/jvmquake:test_bionic && docker run jolynch/jvmquake:test_xenial
 
