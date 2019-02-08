@@ -70,16 +70,17 @@ of collectors.
    die.
 2. If my JVM spends excessive time garbage collecting, I want it to die.
 3. I may want to be able to debug why my JVM ran out of memory (e.g.
-   heap dumps or core dumps).
-4. This should work on any JVM (Java 6, Java 8, w.e.).
+   heap dumps or core dumps). I may want jvmquake to signal me that JVM is in
+   trouble before it kills it so I can start gathering additional diagnostics.
+4. This should work on any JVM (Java 6, Java 7, Java 8, Java 11, w.e.).
 
 These principles are in alignment with **Crash Only Software**
 ([background](https://www.usenix.org/legacy/events/hotos03/tech/full_papers/candea/candea.pdf))
 which implores us to crash when we encounter bugs instead of limping along.
 
 ## Knobs and Options
-`jvmquake` has three options passed as three comma delimited integers
-`<threshold,runtime_weight,action>`:
+`jvmquake` has three options passed as comma delimited integers
+`<threshold>,<runtime_weight>,<action>`:
 
  * `threshold` (default: 30): the maximum GC "deficit" which can be
    accumulated before jvmquake takes action, specified in seconds.
@@ -93,6 +94,17 @@ which implores us to crash when we encounter bugs instead of limping along.
    trigger). If nonzero, jvmquake raises that signal number as an OS-level
    signal. **Regardless of the action, the JVM is then forcibly killed via a
    `SIGKILL`.**
+
+In addition, `jvmquake` supports keyword arguments passed as comma separated
+`key=value` pairs in a fourth argument, so
+`int,int,int,key1=value1,key2=value2`. The currently supported key value pairs
+are:
+ * `warn` (type: int, default: maxint): an amount of GC "deficit" (analogous
+   to `threshold` which will  cause `jvmquake` to touch a file (see `touch`)
+   before it kills the JVM. The default setting is not to warn.
+ * `touch` (type: string, default: `/tmp/jvmquake_warn_gc`): The file path that
+   jvmquake should open (creating if neccesary) and update the access and
+   modification time on when there is more than `warn` GC "deficit".
 
 ## Algorithm Details
 To achieve our goal, we build on `jvmkill`. In addition to dying when we see a
@@ -134,6 +146,10 @@ def on_gc_end()
     if token_bucket > gc_threshold:
         take_action()
 ```
+
+The `warn` and `touch` options just touch a file (specified by `touch`) when
+the `token_bucket` exceeds the warning gc threshold instead of the kill
+threshold.
 
 # Building and Usage
 As `jvmquake` is a JVMTI c agent (so that it lives outside the heap and cannot
@@ -205,6 +221,14 @@ deficit where running time is 10:1 weighted to gc time:
 java -agentpath:/path/to/libjvmquake.so=60,10,0 <your java program here>
 ```
 
+If you want to trigger a `SIGKILL` immediately after a 30s GC deficit accrues
+and touch `/tmp/jvmquake` after _any_ 1s GC pause or more (presumably to inform
+a watching process to fire off some kind of profiler or other diagnostics.
+
+```
+java -agentpath:/path/to/libjvmquake.so=30,1,9,warn=1,touch=/tmp/jvmquake <your java program here>
+```
+
 # Testing
 `jvmquake` comes with a test suite of OOM conditions (running out of memory,
 threads, gcing too much, etc) which you can run if you have `tox` and
@@ -222,4 +246,5 @@ If you have docker you can also run the tests with that
 make docker
 ```
 
-Coming soon: A test suite showing that the JVM options don't work.
+There is also a test suite in `tests/test_java_opts.py` which shows that
+the standard JVM options do or do not work in various situations.

@@ -1,4 +1,7 @@
+#include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <signal.h>
 #include <stdio.h>
@@ -22,7 +25,13 @@ static unsigned long opt_gc_threshold = 30; // seconds, converted to nanos in th
 // corresponds to a thoughput of 1/(5+1) == 16.666%
 static unsigned long opt_runtime_weight = 5;
 // trigger an OOM
-static unsigned int opt_signal = 0;
+static unsigned int  opt_signal = 0;
+// Arbitrary optional keyword arguments in format key=value,key=value,etc...
+static const char    KWARG_WARN[5] = "warn";
+static const char    KWARG_TOUCH[6] = "touch";
+
+static unsigned long opt_gc_warning_threshold = ULONG_MAX;
+static char          opt_gc_warning_path[256] = "/tmp/jvmquake_warn_gc";
 
 // Signal variable that the watchdog should trigger an action
 static short trigger_killer = 0;
@@ -42,7 +51,8 @@ static void JNICALL
 resource_exhausted(jvmtiEnv *jvmti_env, JNIEnv *jni_env, jint flags,
                    const void *reserved, const char *description) {
     fprintf(stderr,
-            "ResourceExhausted: %s: killing current process!\n", description);
+            "(jvmquake) ResourceExhausted: %s: sending %d then killing current process!\n",
+            description, opt_signal);
     raise(opt_signal);
     raise(SIGKILL);
 }
@@ -155,6 +165,56 @@ gc_finished(jvmtiEnv *jvmti) {
             err = (*jvmti)->RawMonitorExit(jvmti, lock);
             error_check(err, "Failed to notify killer thread");
         }
+    } else if (val > opt_gc_warning_threshold && opt_gc_warning_path != NULL) {
+        fprintf(stderr,
+                "(jvmquake) Above GC warning threshold [%lds]: touching (%s)\n",
+                opt_gc_warning_threshold / NANOS, opt_gc_warning_path);
+        int fd = open(opt_gc_warning_path, O_CREAT | O_WRONLY, 0666);
+        if (fd >= 0) {
+            futimes(fd, NULL);
+            close(fd);
+        } else {
+            fprintf(stderr, "(jvmquake) ERROR: Could not touch (%s), error (%d)\n",
+                    opt_gc_warning_path, errno);
+        }
+    }
+}
+
+static void
+parse_kwargs(char *kwargs) {
+    if (strlen(kwargs) == 0) { return; }
+    const char comma[2] = ",";
+
+    char * savestate;
+    char * key;
+    char * value;
+    char * equal_pos;
+
+    key = strtok_r(kwargs, comma, &savestate);
+
+    while (key != NULL) {
+        equal_pos = strchr(key, '=');
+        if (equal_pos != NULL) {
+            // Now we have ... two valid strings
+            *equal_pos = '\0';
+            value = equal_pos + 1;
+            if (!strncmp(key, KWARG_WARN, strlen(KWARG_WARN))) {
+                opt_gc_warning_threshold = atol(value) * NANOS;
+            } else if (!strncmp(key, KWARG_TOUCH, strlen(KWARG_TOUCH))) {
+                strncpy(opt_gc_warning_path, value, 255);
+            }
+        } else {
+            fprintf(stderr,
+                    "(jvmquake): WARN: no equals in key=value pair [%s]\n",
+                    key);
+        }
+        key = strtok_r(NULL, comma, &savestate);
+    }
+
+    if (opt_gc_warning_threshold < ULONG_MAX) {
+        fprintf(stderr,
+                "(jvmquake) using keyword options: warn_threshold=[%lds],touch_path=[%s]\n",
+                opt_gc_warning_threshold / NANOS, opt_gc_warning_path);
     }
 }
 
@@ -163,20 +223,33 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
 {
     jvmtiEnv *jvmti;
     jvmtiError err;
+    char *opt_kwargs;
+    opt_kwargs = malloc(sizeof(*opt_kwargs) * 2048);
 
+    int num_options = 0;
     if (options) {
-        sscanf(options, "%ld,%ld,%d", &opt_gc_threshold, &opt_runtime_weight, &opt_signal);
+        num_options = sscanf(
+            options, "%ld,%ld,%d,%2047s",
+            &opt_gc_threshold, &opt_runtime_weight, &opt_signal,
+            // Optional settings come in key=value,key=value pairs
+            opt_kwargs);
     }
 
     if (opt_signal == 0) {
         fprintf(stderr,
-                "(jvmquake) using options: threshold=%ld seconds,runtime_weight=%ld:1,action=oom\n",
+                "(jvmquake) using options: threshold=[%lds],runtime_weight=[%ld:1],action=[JVM OOM]\n",
                 opt_gc_threshold, opt_runtime_weight);
     } else {
         fprintf(stderr,
-                "(jvmquake) using options: threshold=%ld seconds,runtime_weight=%ld:1,action=signal%d\n",
+                "(jvmquake) using options: threshold=[%lds],runtime_weight=[%ld:1],action=[signal %d]\n",
                 opt_gc_threshold, opt_runtime_weight, opt_signal);
     }
+
+    // We had kwargs if num_options was 4
+    if (num_options == 4) {
+       parse_kwargs(opt_kwargs);
+    }
+    free(opt_kwargs);
 
     opt_gc_threshold *= NANOS;
 
@@ -229,5 +302,3 @@ Agent_OnLoad(JavaVM *vm, char *options, void *reserved)
 
     return JNI_OK;
 }
-
-
