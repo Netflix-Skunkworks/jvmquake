@@ -1,13 +1,12 @@
 import os
-import resource
 
 from plumbum import local
 import pytest
 
 
 CHECK_CORES = os.environ.get('CHECK_CORES', '') != ''
-JAVA_HOME=os.environ.get('JAVA_HOME')
-assert JAVA_HOME != None
+JAVA_HOME = os.environ.get('JAVA_HOME')
+assert JAVA_HOME is not None
 
 java_cmd = local["{0}/bin/java".format(JAVA_HOME)]
 agent_path = "-agentpath:{0}/libjvmquake.so".format(os.getcwd())
