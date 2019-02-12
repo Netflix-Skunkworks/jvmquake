@@ -67,3 +67,6 @@ gclog
 .tox
 *__pycache__
 *.pyc
+
+# core files
+core

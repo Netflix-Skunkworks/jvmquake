@@ -1,8 +1,12 @@
 from pathlib import Path
 
 import plumbum
+import pytest
 
-from environment import *
+from environment import assert_files
+from environment import class_path
+from environment import cleanup
+from environment import java_cmd
 
 
 @pytest.fixture()
