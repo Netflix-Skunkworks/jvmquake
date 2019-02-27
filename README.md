@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/jolynch/jvmquake.svg?branch=master)](https://travis-ci.org/jolynch/jvmquake)
+[![Build Status](https://travis-ci.org/Netflix-Skunkworks/jvmquake.svg?branch=master)](https://travis-ci.org/Netflix-Skunkworks/jvmquake)
 
 # `jvmquake`
 A JVMTI agent that attaches to your JVM and automatically signals and kills it
