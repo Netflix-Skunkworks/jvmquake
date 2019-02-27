@@ -1,4 +1,9 @@
 /*
+ * Modifications copyright 2019 Netflix, Inc.
+ *
+ * Taken https://github.com/airlift/jvmkill/blob/master/JvmKillTest.java,
+ * Apache licensed.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
