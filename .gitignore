@@ -70,3 +70,7 @@ gclog
 
 # core files
 core
+
+# python stuff
+.ipynb_checkpoints
+venv
