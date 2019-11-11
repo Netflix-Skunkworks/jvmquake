@@ -18,7 +18,7 @@ demonstrated in production to be superior to the built in JVM options.
 Netflix currently (2019-11-11) run this software attached to a very large
 number of Cassandra and Elasticsearch JVMs.
 
-If you are not interested in motivating why we built this, head straight to
+A detailed motivation is below. To just start using `jvmquake`, skip to
 [Building and Usage](#building-and-usage) for how to build and use this agent.
 
 # Motivation
