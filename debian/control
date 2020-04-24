@@ -1,0 +1,11 @@
+Source: jvmquake
+Section: java
+Priority: optional
+Maintainer: Joseph Lynch <josephl@netflix.com>
+Build-Depends: debhelper (>=10), openjdk-8-jdk
+Homepage: https://github.com/Netflix-Skunkworks/jvmquake
+
+Package: jvmquake
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: A JVMTI agent that kills your JVM when things go sideways 

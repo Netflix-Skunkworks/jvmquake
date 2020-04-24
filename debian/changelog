@@ -1,0 +1,5 @@
+jvmquake (0.1) unstable; urgency=medium
+
+  * Initial Debian packaging.
+
+ -- Josh Snyder <joshs@netflix.com>  Fri, 24 Apr 2020 01:03:22 -0700
