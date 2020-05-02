@@ -154,10 +154,12 @@ the `token_bucket` exceeds the warning gc threshold instead of the kill
 threshold.
 
 # Building and Usage
-As `jvmquake` is a JVMTI c agent (so that it lives outside the heap and cannot
+As `jvmquake` is a JVMTI C agent (so that it lives outside the heap and cannot
 be affected by GC behavior), you must compile it before using it against
 your JVM. You can either do this on the machine running the Java project or
-externaly either in a debian package or as part of packaging the JVM itself.
+more commonly in an external build that generates the `.so` or a package such
+as a a `.deb`. The generated `.so` depends only on libc and should work with any
+linux JDK newer than 8.
 
 ```bash
 # Compile jvmquake against the JVM the application is using. If you do not
@@ -172,7 +174,8 @@ For example if the Oracle Java 8 JVM is located at `/usr/lib/jvm/java-8-oracle`:
 make JAVA_HOME=/usr/lib/jvm/java-8-oracle
 ```
 
-The agent is now available as `libjvmquake.so`.
+The agent is now available at `build/libjvmquake.so`.
+
 
 ## How to Use the Agent
 Once you have the agent built, to use it just run your java program with

@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import os
+import glob
+from pathlib import Path
 
 from plumbum import local
 import pytest
@@ -22,8 +24,19 @@ CHECK_CORES = os.environ.get('CHECK_CORES', '') != ''
 JAVA_HOME = os.environ.get('JAVA_HOME')
 assert JAVA_HOME is not None
 
+# Java 9 and 11 removed a bunch of GC flags
+JAVA_MAJOR_VERSION = int(os.environ.get('JAVA_MAJOR_VERSION', '8'))
+
+AGENT_DIR = os.environ.get('AGENT_DIR', Path(os.getcwd(), 'build').as_posix())
+AGENT_PATH = glob.glob('{}/*.so'.format(AGENT_DIR))
+if len(AGENT_PATH) == 0:
+    # assume that jvmquake has been installed
+    AGENT_PATH='libjvmquake.so'
+else:
+    AGENT_PATH=AGENT_PATH[0]
+
 java_cmd = local["{0}/bin/java".format(JAVA_HOME)]
-agent_path = "-agentpath:{0}/libjvmquake.so".format(os.getcwd())
+agent_path = "-agentpath:{0}".format(AGENT_PATH)
 class_path = "{0}/tests".format(os.getcwd())
 
 
