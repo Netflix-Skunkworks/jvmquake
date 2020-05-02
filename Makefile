@@ -2,22 +2,25 @@ ifndef JAVA_HOME
     $(error JAVA_HOME not set)
 endif
 
+BUILD ?= build
 INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
 CFLAGS=-Wall -Werror -fPIC -shared $(INCLUDE) -lrt
 
-TARGET=libjvmquake.so
+TARGET=$(BUILD)/libjvmquake.so
 
 .PHONY: all clean test
 
 all:
-	gcc $(CFLAGS) -o $(TARGET) jvmquake.c
+	mkdir -p $(BUILD)
+	$(CC) -v
+	$(CC) $(CFLAGS) -o $(TARGET) src/jvmquake.c
 	chmod 644 $(TARGET)
 
 java_test_targets:
 	${JAVA_HOME}/bin/javac tests/*.java
 
 clean:
-	rm -f $(TARGET)
+	rm -rf build
 	rm -f *.class
 	rm -f *.hprof
 	rm -f core

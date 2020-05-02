@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+from pathlib import Path
 
 from plumbum import local
 import pytest
@@ -21,9 +22,11 @@ import pytest
 CHECK_CORES = os.environ.get('CHECK_CORES', '') != ''
 JAVA_HOME = os.environ.get('JAVA_HOME')
 assert JAVA_HOME is not None
+AGENT_PATH = os.environ.get('AGENT_PATH', Path(os.getcwd(), 'build', 'libjvmquake.so'))
+
 
 java_cmd = local["{0}/bin/java".format(JAVA_HOME)]
-agent_path = "-agentpath:{0}/libjvmquake.so".format(os.getcwd())
+agent_path = "-agentpath:{0}".format(AGENT_PATH)
 class_path = "{0}/tests".format(os.getcwd())
 
 
