@@ -5,10 +5,10 @@ services:
 
 env:
   matrix:
-  - TARGET=test_xenial_java8
-  - TARGET=test_bionic_java8
-  - TARGET=test_focal_java8
-  - TARGET=test_centos7_java8
+  - TARGET=test_xenial_openjdk8
+  - TARGET=test_bionic_openjdk8
+  - TARGET=test_focal_openjdk8
+  - TARGET=test_centos7_openjdk8
 
 jobs:
   include:

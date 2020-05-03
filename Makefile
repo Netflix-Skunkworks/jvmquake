@@ -47,21 +47,21 @@ build_deb_in_docker: build_in_docker
 	docker rm -f jvmquake-debbuild
 
 # Ubuntu builds test with both the 
-test_xenial_java8: build_deb_in_docker
+test_xenial_openjdk8: build_deb_in_docker
 	docker build -f dockerfiles/test/Dockerfile.ubuntu --build-arg UBUNTU_VERSION=16.04 --build-arg JAVA_VERSION=8 . -t jolynch/jvmquake:$@
 	docker run --rm -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:$@
 	docker run --rm -v $(shell pwd)/dist/:/work/dist/ jolynch/jvmquake:$@
 
-test_bionic_java8: build_deb_in_docker
+test_bionic_openjdk8: build_deb_in_docker
 	docker build -f dockerfiles/test/Dockerfile.ubuntu --build-arg UBUNTU_VERSION=18.04 --build-arg JAVA_VERSION=8 . -t jolynch/jvmquake:$@
 	docker run --rm -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:$@
 	docker run --rm -v $(shell pwd)/dist/:/work/dist/ jolynch/jvmquake:$@
 
-test_focal_java8: build_deb_in_docker
+test_focal_openjdk8: build_deb_in_docker
 	docker build -f dockerfiles/test/Dockerfile.ubuntu --build-arg UBUNTU_VERSION=20.04 --build-arg JAVA_VERSION=8 . -t jolynch/jvmquake:$@
 	docker run --rm -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:$@
 	docker run --rm -v $(shell pwd)/dist/:/work/dist/ jolynch/jvmquake:$@
 
-test_centos7_java8: build_in_docker
+test_centos7_openjdk8: build_in_docker
 	docker build -f dockerfiles/test/Dockerfile.centos --build-arg CENTOS_VERSION=7 --build-arg JAVA_VERSION=1.8.0 . -t jolynch/jvmquake:$@
 	docker run --rm -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:$@
