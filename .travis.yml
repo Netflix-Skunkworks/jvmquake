@@ -7,6 +7,7 @@ env:
   matrix:
   - TARGET=test_xenial_openjdk8
   - TARGET=test_bionic_openjdk8
+  - TARGET=test_bionic_zulu8
   - TARGET=test_focal_openjdk8
   - TARGET=test_centos7_openjdk8
 
