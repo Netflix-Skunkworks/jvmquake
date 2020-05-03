@@ -36,8 +36,11 @@ docker:
 	docker container cp jvmquake-build:/work/build/. ./build/
 	docker container rm -f jvmquake-build
 
-	#docker build -f dockerfiles/Dockerfile.xenial . -t jolynch/jvmquake:test_xenial
-	#docker run jolynch/jvmquake:test_bionic && docker run jolynch/jvmquake:test_xenial
+	#docker build -f dockerfiles/test/Dockerfile --build-arg UBUNTU_VERSION=16.04 --build-arg JAVA_VERSION=8 . -t jolynch/jvmquake:test_16.04_8
+	#docker build -f dockerfiles/test/Dockerfile --build-arg UBUNTU_VERSION=16.04 --build-arg JAVA_VERSION=9 . -t jolynch/jvmquake:test_16.04_9
+	#docker build -f dockerfiles/test/Dockerfile --build-arg UBUNTU_VERSION=18.04 --build-arg JAVA_VERSION=8 . -t jolynch/jvmquake:test_18.04_8
+	docker build -f dockerfiles/test/Dockerfile --build-arg UBUNTU_VERSION=18.04 --build-arg JAVA_VERSION=11 . -t jolynch/jvmquake:test_18.04_11
+	docker run -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:test_18.04_11
 
 test_in_docker:
 	tox -e test

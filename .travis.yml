@@ -1,13 +1,22 @@
 ---
 sudo: required
 
+env:
+  - UBUNTU_VERSION=18.04 JAVA_VERSION=8
+  - UBUNTU_VERSION=18.04 JAVA_VERSION=11
+  - UBUNTU_VERSION=16.04 JAVA_VERSION=8
+  - UBUNTU_VERSION=16.04 JAVA_VERSION=9
+
 services:
   - docker
 
 before_install:
-  - docker build -f dockerfiles/Dockerfile.bionic . -t jolynch/jvmquake:test_bionic
-  - docker build -f dockerfiles/Dockerfile.xenial . -t jolynch/jvmquake:test_xenial
+  - docker build -f dockerfiles/build/Dockerfile . -t jolynch/jvmquake:build
+  - docker build -f dockerfiles/test/Dockerfile . -t jolynch/jvmquake:test_${UBUNTU_VERSION}_${JAVA_VERSION}
 
 script:
-  - docker run jolynch/jvmquake:test_bionic && docker run jolynch/jvmquake:test_xenial
+  - docker container create --name jvmquake-build jolynch/jvmquake:build
+  - docker container cp jvmquake-build:/work/build/. ./build/
+  - docker container rm -f jvmquake-build
+  - docker run -v $(pwd)/build/:/work/build/ jolynch/jvmquake:test_${UBUNTU_VERSION}_${JAVA_VERSION}
 
