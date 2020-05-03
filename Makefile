@@ -34,9 +34,11 @@ check_java:
 	endif
 
 docker:
+	mkdir -p $(BUILD)
+	docker container rm -f jvmquake-build || true
 	docker build -f dockerfiles/build/Dockerfile . -t jolynch/jvmquake:build
 	docker container create --name jvmquake-build jolynch/jvmquake:build
-	docker container cp jvmquake-build:/work/build/libjvmquake.so ./build/libjvmquake-linux-x86_64.so
+	docker container cp jvmquake-build:/work/build/. ./build/
 	docker container rm -f jvmquake-build
 
 	#docker build -f dockerfiles/Dockerfile.xenial . -t jolynch/jvmquake:test_xenial

@@ -3,10 +3,11 @@ ifndef JAVA_HOME
 endif
 
 BUILD ?= ../build
+SO_NAME ?= libjvmquake.so
+TARGET= $(BUILD)/$(SO_NAME)
+
 INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
 CFLAGS=-Wall -Werror -fPIC -shared $(INCLUDE) -lrt
-
-TARGET=$(BUILD)/libjvmquake.so
 
 .PHONY: all
 
