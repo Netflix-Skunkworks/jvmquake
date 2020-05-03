@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import pytest
 from pathlib import Path
 
@@ -138,4 +139,6 @@ def test_jvmquake_thread_oom(thread_ulimit):
     print("Executing thread OOM")
     print("[{0}]".format(thread_oom))
     (_, stdout, stderr) = thread_oom.run(retcode=-9, timeout=10)
-    assert "unable to create new native thread" in stderr
+    # Java 11 took out the word "new"
+    assert "unable to create" in stderr
+    assert "native thread" in stderr

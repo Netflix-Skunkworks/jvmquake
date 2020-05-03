@@ -24,6 +24,9 @@ CHECK_CORES = os.environ.get('CHECK_CORES', '') != ''
 JAVA_HOME = os.environ.get('JAVA_HOME')
 assert JAVA_HOME is not None
 
+# Java 9 and 11 removed a bunch of GC flags
+JAVA_MAJOR_VERSION = int(os.environ.get('JAVA_MAJOR_VERSION', '8'))
+
 AGENT_DIR = os.environ.get('AGENT_DIR', Path(os.getcwd(), 'build').as_posix())
 AGENT_PATH = glob.glob('{}/*.so'.format(AGENT_DIR))
 if len(AGENT_PATH) == 0:
