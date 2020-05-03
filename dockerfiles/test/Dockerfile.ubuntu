@@ -28,9 +28,10 @@ WORKDIR /work
 COPY --from=builder /work/tests/. /work/tests
 COPY --from=builder /work/Makefile /work/Makefile
 COPY --from=builder /work/tox.ini /work/tox.ini
+COPY tests/run_tests.sh /work/run_tests.sh
 
 ENV JAVA_HOME /usr/lib/jvm/java-$JAVA_VERSION-openjdk-amd64
-# This should get mounted in
+# This should get mounted in if we want to use it
 ENV AGENT_DIR /work/build/
 
-CMD ["make", "test_in_docker"]
+CMD ["/work/run_tests.sh"]

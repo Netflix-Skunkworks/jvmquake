@@ -29,7 +29,7 @@ AGENT_PATH = glob.glob('{}/*.so'.format(AGENT_DIR))
 if len(AGENT_PATH) == 0:
     # assume that jvmquake has been installed
     AGENT_PATH='libjvmquake.so'
-else
+else:
     AGENT_PATH=AGENT_PATH[0]
 
 java_cmd = local["{0}/bin/java".format(JAVA_HOME)]

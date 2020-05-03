@@ -74,3 +74,6 @@ core
 # python stuff
 .ipynb_checkpoints
 venv
+
+# debian
+dist
