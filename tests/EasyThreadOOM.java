@@ -18,14 +18,13 @@ import java.util.List;
 
 public final class EasyThreadOOM
 {
-    @SuppressWarnings("InfiniteLoopStatement")
     public static void main(String[] args)
             throws Exception
     {
         System.out.println("Thread ~fork bombing the JVM ...");
         List<Thread> list = new ArrayList<>();
         try {
-            while (true) {
+            for (int i = 0; i < 16777216; i++) {
                 Thread thread = new Thread(() -> {
                     while (true) {
                         try {

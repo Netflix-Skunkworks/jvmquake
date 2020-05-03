@@ -33,6 +33,9 @@ def thread_ulimit():
         resource.RLIMIT_NPROC,
         (32768, y)
     )
+    print("\nProcess limit after fixture: {}\n".format(
+        resource.getrlimit(resource.RLIMIT_NPROC))
+    )
     yield
     resource.setrlimit(resource.RLIMIT_NPROC, (x, y))
 
@@ -138,7 +141,7 @@ def test_jvmquake_thread_oom(thread_ulimit):
     ]
     print("Executing thread OOM")
     print("[{0}]".format(thread_oom))
-    (_, stdout, stderr) = thread_oom.run(retcode=-9, timeout=10)
+    (_, stdout, stderr) = thread_oom.run(retcode=-9, timeout=60)
     # Java 11 took out the word "new"
     assert "unable to create" in stderr
     assert "native thread" in stderr
