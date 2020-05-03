@@ -58,15 +58,32 @@ test_bionic_openjdk8: build_deb_in_docker
 	docker run --rm -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:$@
 	docker run --rm -v $(shell pwd)/dist/:/work/dist/ jolynch/jvmquake:$@
 
-test_focal_openjdk8: build_deb_in_docker
-	docker build -f dockerfiles/test/Dockerfile.ubuntu --build-arg UBUNTU_VERSION=20.04 --build-arg JAVA_VERSION=8 . -t jolynch/jvmquake:$@
-	docker run --rm -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:$@
-	docker run --rm -v $(shell pwd)/dist/:/work/dist/ jolynch/jvmquake:$@
-
 test_bionic_zulu8: build_deb_in_docker
 	docker build -f dockerfiles/test/Dockerfile.ubuntu.zulu --build-arg UBUNTU_VERSION=18.04 --build-arg JAVA_VERSION=8 . -t jolynch/jvmquake:$@
 	docker run --rm -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:$@
 	docker run --rm -v $(shell pwd)/dist/:/work/dist/ jolynch/jvmquake:$@
+
+test_bionic_zulu11: build_deb_in_docker
+	docker build -f dockerfiles/test/Dockerfile.ubuntu.zulu --build-arg UBUNTU_VERSION=18.04 --build-arg JAVA_VERSION=11 . -t jolynch/jvmquake:$@
+	docker run -e JAVA_MAJOR_VERSION=11 --rm -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:$@
+	docker run -e JAVA_MAJOR_VERSION=11 --rm -v $(shell pwd)/dist/:/work/dist/ jolynch/jvmquake:$@
+
+test_bionic_openjdk11: build_deb_in_docker
+	docker build -f dockerfiles/test/Dockerfile.ubuntu --build-arg UBUNTU_VERSION=18.04 --build-arg JAVA_VERSION=11 . -t jolynch/jvmquake:$@
+	docker run -e JAVA_MAJOR_VERSION=11 --rm -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:$@
+	docker run -e JAVA_MAJOR_VERSION=11 --rm -v $(shell pwd)/dist/:/work/dist/ jolynch/jvmquake:$@
+
+test_focal_openjdk8: build_deb_in_docker
+	docker build -f dockerfiles/test/Dockerfile.ubuntu --build-arg UBUNTU_VERSION=20.04 --build-arg JAVA_VERSION=8 . -t jolynch/jvmquake:$@
+	export JAVA_MAJOR_VERSION = 8
+	docker run --rm -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:$@
+	docker run --rm -v $(shell pwd)/dist/:/work/dist/ jolynch/jvmquake:$@
+
+test_focal_openjdk11: build_deb_in_docker
+	docker build -f dockerfiles/test/Dockerfile.ubuntu --build-arg UBUNTU_VERSION=20.04 --build-arg JAVA_VERSION=11 . -t jolynch/jvmquake:$@
+	docker run -e JAVA_MAJOR_VERSION=11 --rm -v $(shell pwd)/build/:/work/build/ jolynch/jvmquake:$@
+	docker run -e JAVA_MAJOR_VERSION=11 --rm -v $(shell pwd)/dist/:/work/dist/ jolynch/jvmquake:$@
+
 
 # CentOS builds just test with the .so file
 

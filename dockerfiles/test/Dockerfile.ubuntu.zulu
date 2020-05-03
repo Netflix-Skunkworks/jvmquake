@@ -8,7 +8,7 @@ RUN apt-get install -y software-properties-common
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0xB1998361219BD9C9
 RUN apt-add-repository 'deb http://repos.azulsystems.com/ubuntu stable main'
 RUN apt-get update
-RUN apt-get install -y zulu-8
+RUN apt-get install -y zulu-$JAVA_VERSION
 RUN apt-get install -y make
 
 ENV JAVA_HOME /usr/lib/jvm/zulu-$JAVA_VERSION-amd64
@@ -25,7 +25,7 @@ RUN apt-get install -y software-properties-common
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0xB1998361219BD9C9
 RUN apt-add-repository 'deb http://repos.azulsystems.com/ubuntu stable main'
 RUN apt-get update
-RUN apt-get install -y zulu-8
+RUN apt-get install -y zulu-$JAVA_VERSION
 RUN apt-get install -y make
 RUN apt-get install -y python3-minimal python3-pip
 
