@@ -1,0 +1,5 @@
+jvmquake (0.1.0) unstable; urgency=medium
+
+  * Initial debian packagaing
+
+ -- Joseph Lynch <josephl@netflix.com>  Sat, 02 May 2020 19:33:32 -0700
