@@ -1,19 +1,29 @@
----
 language: c
-sudo: false
+
+services:
+- docker
 
 env:
+  matrix:
   - TARGET=test_xenial_java8
   - TARGET=test_bionic_java8
   - TARGET=test_focal_java8
   - TARGET=test_centos7_java8
-  # Need some fixes for java 11 to work with the test suite
-  #- TARGET=test_xenial_java11
-  #- TARGET=test_bionic_java11
-  #- TARGET=test_centos7_java11
 
-services:
-  - docker
-
+jobs:
+  include:
+  - stage: GitHub Artifact Release
+    script: make build_deb_in_docker
+    deploy:
+      provider: releases
+      api_key:
+        secure: CrvufG0m06jOIn9fJExOCbEzLquCa8Wk4S3FEQ7OIF/lKuVzdy+7GR5Eg6sMZvz+mAfTIQ9tDVKrXMVXOoTRYzPuvhPf1Ncb7hf8+fHSBiDoUk5jVMolPFj4siBJemawKEJevVHDEjMavacGjW3ifJl7eE1jy9CA/aBja3O0NsVRqfeNJFJpgDzS67HYuQFdDGG8t806P/ULh+h071N0IpZnexNV6RzuXuSg5Ltnaaa1HJ6+F7ImZLmRo5esWD7bFALfTZT53UCwcUWJJyffC76yVKN4Q11DdLR2DMcdiP83lKXSGJi8sjSbNahO5uagD/ve5ehrn1hMLqEKjOw5EkmeTVTJ6FbkGR710CSAEH6wT/mVr/v3lXYifSZ/mpOLruSl/XzViOoFOTzt/hjcLa7doWoQ31YBtGPjIki0mWwxvO/idU3MvghGVguH2A02qbsCpf3+9J/+FBF2CXoWH+NwadQMRuReE2Nj07LDsF38FsEXQys45xPEWLRoOsrtrFmsrruZQ6i0xONqE+cuSQLVtSmrvYCUzFtu8PnWXCr/r1C9WD9C+jIdvL6eYHR/ZaHxx1/XmfKCPnZeUpowkaIm6WdvN7IJrMwSPMxI28GN59w2KrRgKiCAJKpg7zFYxJ1/R1wEvuXcmqZgA/sUF4DzRZrrZSgoHKAsu8HH8eA=
+      file_glob: true
+      file:
+      - dist/*.deb
+      - build/*.so
+      on:
+        tags: true
+        branch: master
 script:
-  - make $TARGET
+- make $TARGET
