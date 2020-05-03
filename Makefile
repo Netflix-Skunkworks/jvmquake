@@ -1,22 +1,12 @@
-ifndef JAVA_HOME
-    $(error JAVA_HOME not set)
-endif
+.PHONY: all clean test
 
 BUILD ?= build
-INCLUDE= -I"$(JAVA_HOME)/include" -I"$(JAVA_HOME)/include/linux"
-CFLAGS=-Wall -Werror -fPIC -shared $(INCLUDE) -lrt
-
-TARGET=$(BUILD)/libjvmquake.so
-
-.PHONY: all clean test
 
 all:
 	mkdir -p $(BUILD)
-	$(CC) -v
-	$(CC) $(CFLAGS) -o $(TARGET) src/jvmquake.c
-	chmod 644 $(TARGET)
+	BUILD=../build make -C src
 
-java_test_targets:
+java_test_targets: check_java
 	${JAVA_HOME}/bin/javac tests/*.java
 
 clean:
@@ -38,7 +28,16 @@ test_jvm: all java_test_targets
 
 test: all java_test_targets test_jvmquake test_jvm
 
+check_java:
+	ifndef JAVA_HOME
+		$(error JAVA_HOME not set)
+	endif
+
 docker:
-	docker build -f dockerfiles/Dockerfile.bionic . -t jolynch/jvmquake:test_bionic
-	docker build -f dockerfiles/Dockerfile.xenial . -t jolynch/jvmquake:test_xenial
-	docker run jolynch/jvmquake:test_bionic && docker run jolynch/jvmquake:test_xenial
+	docker build -f dockerfiles/build/Dockerfile . -t jolynch/jvmquake:build
+	docker container create --name jvmquake-build jolynch/jvmquake:build
+	docker container cp jvmquake-build:/work/build/libjvmquake.so ./build/libjvmquake-linux-x86_64.so
+	docker container rm -f jvmquake-build
+
+	#docker build -f dockerfiles/Dockerfile.xenial . -t jolynch/jvmquake:test_xenial
+	#docker run jolynch/jvmquake:test_bionic && docker run jolynch/jvmquake:test_xenial
