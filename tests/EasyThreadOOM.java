@@ -22,23 +22,26 @@ public final class EasyThreadOOM
     public static void main(String[] args)
             throws Exception
     {
-        System.out.println("triggering OutOfMemory...");
+        System.out.println("Thread ~fork bombing the JVM ...");
         List<Thread> list = new ArrayList<>();
         try {
             while (true) {
                 Thread thread = new Thread(() -> {
                     while (true) {
                         try {
-                            Thread.sleep(1000);
+                            Thread.sleep(10000);
                         } catch (InterruptedException ign) {}
                     }
                 });
                 thread.start();
+                // Hold onto the thread
+                list.add(thread);
             }
         }
         catch (Exception t) {
             System.out.println(t.toString());
+        } finally {
+            System.out.println("final list size: " + list.size());
         }
-        System.out.println("final list size: " + list.size());
     }
 }
