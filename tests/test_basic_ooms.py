@@ -31,7 +31,7 @@ def thread_ulimit():
     (x, y) = resource.getrlimit(resource.RLIMIT_NPROC)
     resource.setrlimit(
         resource.RLIMIT_NPROC,
-        (x - 1000, y)
+        (32768, y)
     )
     yield
     resource.setrlimit(resource.RLIMIT_NPROC, (x, y))
