@@ -1,0 +1,29 @@
+FROM ubuntu:18.04 as builder
+
+RUN apt-get update
+RUN apt-get install -y openjdk-8-jdk-headless
+RUN apt-get install -y make
+
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+WORKDIR /work
+
+COPY . /work
+RUN make java_test_targets
+
+FROM ubuntu:18.04
+
+RUN apt-get update
+RUN apt-get install -y openjdk-8-jre-headless
+RUN apt-get install -y python3.6-minimal python3-pip
+
+RUN python3.6 -m pip install pip --upgrade
+RUN python3.6 -m pip install tox
+
+WORKDIR /work
+
+COPY --from=builder /work/. /work
+
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+ENV AGENT_DIR /work/build/
+
+CMD ["make", "test_in_docker"]

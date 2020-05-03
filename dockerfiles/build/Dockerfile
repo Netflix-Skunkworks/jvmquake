@@ -8,7 +8,5 @@ WORKDIR /work
 
 COPY src/ /work
 
-RUN uname -s -m | tr A-Z a-z | tr ' ' - > /work/arch
-
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-RUN BUILD=build SO_NAME=libjvmquake-$(cat /work/arch).so make
+RUN BUILD=build make

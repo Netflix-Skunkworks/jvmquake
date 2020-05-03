@@ -6,8 +6,8 @@ all:
 	mkdir -p $(BUILD)
 	BUILD=../build make -C src
 
-java_test_targets: check_java
-	${JAVA_HOME}/bin/javac tests/*.java
+java_test_targets:
+	make -C tests
 
 clean:
 	rm -rf build
@@ -28,11 +28,6 @@ test_jvm: all java_test_targets
 
 test: all java_test_targets test_jvmquake test_jvm
 
-check_java:
-	ifndef JAVA_HOME
-		$(error JAVA_HOME not set)
-	endif
-
 docker:
 	mkdir -p $(BUILD)
 	docker container rm -f jvmquake-build || true
@@ -43,3 +38,7 @@ docker:
 
 	#docker build -f dockerfiles/Dockerfile.xenial . -t jolynch/jvmquake:test_xenial
 	#docker run jolynch/jvmquake:test_bionic && docker run jolynch/jvmquake:test_xenial
+
+test_in_docker:
+	tox -e test
+	tox -e test_jvm
