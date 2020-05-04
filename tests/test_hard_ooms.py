@@ -19,6 +19,7 @@ from pathlib import Path
 
 from environment import agent_path
 from environment import assert_files
+from environment import JAVA_MAJOR_VERSION
 from environment import CHECK_CORES
 from environment import class_path
 from environment import cleanup
@@ -33,21 +34,34 @@ def test_jvmquake_cms_slow_death_oom():
     OOM and cause a heap dump.
     """
 
-    cms_slow_death = java_cmd[
-        '-Xmx100m',
-        '-XX:+HeapDumpOnOutOfMemoryError',
-        '-XX:+UseParNewGC',
-        '-XX:+UseConcMarkSweepGC',
-        '-XX:CMSInitiatingOccupancyFraction=75',
-        '-XX:+PrintGCDetails',
-        '-XX:+PrintGCDateStamps',
-        '-XX:+PrintGCApplicationConcurrentTime',
-        '-XX:+PrintGCApplicationStoppedTime',
-        '-Xloggc:gclog',
-        agent_path + "=1,1,0",
-        '-cp', class_path,
-        'SlowDeathOOM'
-    ]
+    if JAVA_MAJOR_VERSION > 8:
+        cms_slow_death = java_cmd[
+            '-Xmx100m',
+            '-XX:+HeapDumpOnOutOfMemoryError',
+            '-XX:+UseConcMarkSweepGC',
+            '-XX:CMSInitiatingOccupancyFraction=75',
+            '-XX:+PrintGCDetails',
+            '-Xlog:gc:gclog',
+            agent_path + "=1,1,0",
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
+    else:
+        cms_slow_death = java_cmd[
+            '-Xmx100m',
+            '-XX:+HeapDumpOnOutOfMemoryError',
+            '-XX:+UseParNewGC',
+            '-XX:+UseConcMarkSweepGC',
+            '-XX:CMSInitiatingOccupancyFraction=75',
+            '-XX:+PrintGCDetails',
+            '-XX:+PrintGCDateStamps',
+            '-XX:+PrintGCApplicationConcurrentTime',
+            '-XX:+PrintGCApplicationStoppedTime',
+            '-Xloggc:gclog',
+            agent_path + "=1,1,0",
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
     print("Executing Complex CMS Slow Death OOM")
     print("[{0}]".format(cms_slow_death))
     with cms_slow_death.bgrun(retcode=-9, timeout=10) as proc:
@@ -69,20 +83,31 @@ def test_jvmquake_g1_slow_death_oom():
     We use the zero option to indicate to jvmquake to trigger a java level
     OOM and cause a heap dump.
     """
-
-    g1_slow_death = java_cmd[
-        '-Xmx100m',
-        '-XX:+HeapDumpOnOutOfMemoryError',
-        '-XX:+UseG1GC',
-        '-XX:+PrintGCDetails',
-        '-XX:+PrintGCDateStamps',
-        '-XX:+PrintGCApplicationConcurrentTime',
-        '-XX:+PrintGCApplicationStoppedTime',
-        '-Xloggc:gclog',
-        agent_path + "=1,1,0",
-        '-cp', class_path,
-        'SlowDeathOOM'
-    ]
+    if JAVA_MAJOR_VERSION > 8:
+        g1_slow_death = java_cmd[
+            '-Xmx100m',
+            '-XX:+HeapDumpOnOutOfMemoryError',
+            '-XX:+UseG1GC',
+            '-XX:+PrintGCDetails',
+            '-Xlog:gc:gclog',
+            agent_path + "=1,1,0",
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
+    else:
+        g1_slow_death = java_cmd[
+            '-Xmx100m',
+            '-XX:+HeapDumpOnOutOfMemoryError',
+            '-XX:+UseG1GC',
+            '-XX:+PrintGCDetails',
+            '-XX:+PrintGCDateStamps',
+            '-XX:+PrintGCApplicationConcurrentTime',
+            '-XX:+PrintGCApplicationStoppedTime',
+            '-Xloggc:gclog',
+            agent_path + "=1,1,0",
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
     print("Executing Complex G1GC Slow Death OOM")
     print("[{0}]".format(g1_slow_death))
     with g1_slow_death.bgrun(retcode=-9, timeout=10) as proc:
@@ -102,21 +127,34 @@ def test_jvmquake_cms_slow_death_core(core_ulimit):
     """
     Executes a program which over time does way more GC than actual execution
     """
-    cms_slow_death = java_cmd[
-        '-Xmx100m',
-        '-XX:+HeapDumpOnOutOfMemoryError',
-        '-XX:+UseParNewGC',
-        '-XX:+UseConcMarkSweepGC',
-        '-XX:CMSInitiatingOccupancyFraction=75',
-        '-XX:+PrintGCDetails',
-        '-XX:+PrintGCDateStamps',
-        '-XX:+PrintGCApplicationConcurrentTime',
-        '-XX:+PrintGCApplicationStoppedTime',
-        '-Xloggc:gclog',
-        agent_path + "=1,1,6",
-        '-cp', class_path,
-        'SlowDeathOOM'
-    ]
+    if JAVA_MAJOR_VERSION > 8:
+        cms_slow_death = java_cmd[
+            '-Xmx100m',
+            '-XX:+HeapDumpOnOutOfMemoryError',
+            '-XX:+UseConcMarkSweepGC',
+            '-XX:CMSInitiatingOccupancyFraction=75',
+            '-XX:+PrintGCDetails',
+            '-Xlog:gc:gclog',
+            agent_path + "=1,1,6",
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
+    else:
+        cms_slow_death = java_cmd[
+            '-Xmx100m',
+            '-XX:+HeapDumpOnOutOfMemoryError',
+            '-XX:+UseParNewGC',
+            '-XX:+UseConcMarkSweepGC',
+            '-XX:CMSInitiatingOccupancyFraction=75',
+            '-XX:+PrintGCDetails',
+            '-XX:+PrintGCDateStamps',
+            '-XX:+PrintGCApplicationConcurrentTime',
+            '-XX:+PrintGCApplicationStoppedTime',
+            '-Xloggc:gclog',
+            agent_path + "=1,1,6",
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
     print("Executing Complex CMS Slow Death OOM")
     print("[{0}]".format(cms_slow_death))
     with cms_slow_death.bgrun(retcode=-6, timeout=10) as proc:
@@ -152,15 +190,25 @@ def test_jvmquake_cms_touch_warning():
 
     start_time = time.time()
 
-    cms_slow_death_warn_only = java_cmd[
-        '-Xmx100m',
-        '-XX:+UseParNewGC',
-        '-XX:+UseConcMarkSweepGC',
-        '-XX:CMSInitiatingOccupancyFraction=75',
-        agent_path + "=3,1,9,warn=1",
-        '-cp', class_path,
-        'SlowDeathOOM'
-    ]
+    if JAVA_MAJOR_VERSION > 8:
+        cms_slow_death_warn_only = java_cmd[
+            '-Xmx100m',
+            '-XX:+UseConcMarkSweepGC',
+            '-XX:CMSInitiatingOccupancyFraction=75',
+            agent_path + "=3,1,9,warn=1",
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
+    else:
+        cms_slow_death_warn_only = java_cmd[
+            '-Xmx100m',
+            '-XX:+UseParNewGC',
+            '-XX:+UseConcMarkSweepGC',
+            '-XX:CMSInitiatingOccupancyFraction=75',
+            agent_path + "=3,1,9,warn=1",
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
 
     print("Executing Complex CMS Slow Death OOM")
     print("[{0}]".format(cms_slow_death_warn_only))
@@ -187,15 +235,25 @@ def test_jvmquake_cms_touch_warning_custom_path():
 
     start_time = time.time()
 
-    cms_slow_death_warn_only = java_cmd[
-        '-Xmx100m',
-        '-XX:+UseParNewGC',
-        '-XX:+UseConcMarkSweepGC',
-        '-XX:CMSInitiatingOccupancyFraction=75',
-        agent_path + "=5,1,9,warn=2,touch=" + str(jvmquake_warn_path),
-        '-cp', class_path,
-        'SlowDeathOOM'
-    ]
+    if JAVA_MAJOR_VERSION > 8:
+        cms_slow_death_warn_only = java_cmd[
+            '-Xmx100m',
+            '-XX:+UseConcMarkSweepGC',
+            '-XX:CMSInitiatingOccupancyFraction=75',
+            agent_path + "=5,1,9,warn=2,touch=" + str(jvmquake_warn_path),
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
+    else:
+        cms_slow_death_warn_only = java_cmd[
+            '-Xmx100m',
+            '-XX:+UseParNewGC',
+            '-XX:+UseConcMarkSweepGC',
+            '-XX:CMSInitiatingOccupancyFraction=75',
+            agent_path + "=5,1,9,warn=2,touch=" + str(jvmquake_warn_path),
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
 
     print("Executing Complex CMS Slow Death OOM")
     print("[{0}]".format(cms_slow_death_warn_only))

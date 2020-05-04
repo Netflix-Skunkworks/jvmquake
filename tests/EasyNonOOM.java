@@ -23,7 +23,7 @@ public final class EasyNonOOM
     public static void main(String[] args)
     {
         List<Object> list = new ArrayList<>();
-        double goodZone = 0.50 * Runtime.getRuntime().maxMemory();
+        double goodZone = 0.25 * Runtime.getRuntime().maxMemory();
         System.out.println(String.format(
             "Not triggering OutOfMemory by only allocating %.2f bytes",
             goodZone

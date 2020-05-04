@@ -180,7 +180,7 @@ gc_finished(jvmtiEnv *jvmti) {
             err = (*jvmti)->RawMonitorExit(jvmti, lock);
             error_check(err, "Failed to notify killer thread");
         }
-    } else if (val > opt_gc_warning_threshold && opt_gc_warning_path != NULL) {
+    } else if (val > opt_gc_warning_threshold) {
         fprintf(stderr,
                 "(jvmquake) Above GC warning threshold [%lds]: touching (%s)\n",
                 opt_gc_warning_threshold / NANOS, opt_gc_warning_path);

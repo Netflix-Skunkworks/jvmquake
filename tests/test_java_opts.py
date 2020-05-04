@@ -17,6 +17,7 @@ from pathlib import Path
 import plumbum
 import pytest
 
+from environment import JAVA_MAJOR_VERSION
 from environment import assert_files
 from environment import class_path
 from environment import cleanup
@@ -87,16 +88,27 @@ def test_jvm_cms_slow_death_oom():
     In this case -XX:GCTimeLimit and -XX:GCHeapFreeLimit do squat
     """
 
-    cms_slow_death = java_cmd[
-        '-Xmx100m',
-        '-XX:+UseParNewGC',
-        '-XX:+UseConcMarkSweepGC',
-        '-XX:CMSInitiatingOccupancyFraction=75',
-        '-XX:GCTimeLimit=20',
-        '-XX:GCHeapFreeLimit=80',
-        '-cp', class_path,
-        'SlowDeathOOM'
-    ]
+    if JAVA_MAJOR_VERSION > 8:
+        cms_slow_death = java_cmd[
+            '-Xmx100m',
+            '-XX:+UseConcMarkSweepGC',
+            '-XX:CMSInitiatingOccupancyFraction=75',
+            '-XX:GCTimeLimit=20',
+            '-XX:GCHeapFreeLimit=80',
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
+    else:
+        cms_slow_death = java_cmd[
+            '-Xmx100m',
+            '-XX:+UseParNewGC',
+            '-XX:+UseConcMarkSweepGC',
+            '-XX:CMSInitiatingOccupancyFraction=75',
+            '-XX:GCTimeLimit=20',
+            '-XX:GCHeapFreeLimit=80',
+            '-cp', class_path,
+            'SlowDeathOOM'
+        ]
     print("Executing Complex CMS Slow Death OOM")
     print("[{0}]".format(cms_slow_death))
     with (pytest.raises(plumbum.commands.processes.ProcessTimedOut)):

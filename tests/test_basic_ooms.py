@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
 import pytest
 from pathlib import Path
 
@@ -30,7 +31,10 @@ def thread_ulimit():
     (x, y) = resource.getrlimit(resource.RLIMIT_NPROC)
     resource.setrlimit(
         resource.RLIMIT_NPROC,
-        (x - 1000, y)
+        (32768, y)
+    )
+    print("\nProcess limit after fixture: {}\n".format(
+        resource.getrlimit(resource.RLIMIT_NPROC))
     )
     yield
     resource.setrlimit(resource.RLIMIT_NPROC, (x, y))
@@ -137,5 +141,7 @@ def test_jvmquake_thread_oom(thread_ulimit):
     ]
     print("Executing thread OOM")
     print("[{0}]".format(thread_oom))
-    (_, stdout, stderr) = thread_oom.run(retcode=-9, timeout=10)
-    assert "unable to create new native thread" in stderr
+    (_, stdout, stderr) = thread_oom.run(retcode=-9, timeout=60)
+    # Java 11 took out the word "new"
+    assert "unable to create" in stderr
+    assert "native thread" in stderr
