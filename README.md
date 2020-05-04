@@ -118,7 +118,7 @@ and
 [`GarbageCollectionFinish`](https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html#GarbageCollectionFinish).
 `jvmquake` then keeps a *token bucket* algorithm to keep track of how
 much time is spent GCing relative to running application code. Note that per
-the jvmti spec these only track *stop the world* pausing phases of collections.
+the `JVMTI` spec these only track *stop the world* pausing phases of collections.
 . The following pseudocode is essentially all of `jvmquake`:
 
 ```python3
@@ -158,8 +158,9 @@ As `jvmquake` is a JVMTI C agent (so that it lives outside the heap and cannot
 be affected by GC behavior), you must compile it before using it against
 your JVM. You can either do this on the machine running the Java project or
 more commonly in an external build that generates the `.so` or a package such
-as a a `.deb`. The generated `.so` depends only on libc and should work with any
-linux JDK newer than 8.
+as a `.deb`. The generated `.so` depends only your architecture and libc and
+should work with any JDK newer than the one you compiled it with on the same
+platform (so e.g. `linux-x86_64` will work on all `x86_64` linux systems).
 
 ```bash
 # Compile jvmquake against the JVM the application is using. If you do not
@@ -174,16 +175,29 @@ For example if the Oracle Java 8 JVM is located at `/usr/lib/jvm/java-8-oracle`:
 make JAVA_HOME=/usr/lib/jvm/java-8-oracle
 ```
 
-The agent is now available at `build/libjvmquake.so`.
+The agent is now available at `build/libjvmquake-<platform>.so`. For example,
+on a linux machine you should get `libjvmquake-linux-x86_64.so` and on mac
+you might see `libjvmquake-darwin-x86_64.so`.
 
+*Note*: A `libjvmquake.so` built from source like this is portable to all JVMs
+that implement the same [`JVMTI`](https://docs.oracle.com/javase/8/docs/platform/jvmti/jvmti.html)
+specification. In practice I find the same `.so` works fine with Java 8, 9, 11
+and I imagine it will work until Java changes the spec.
+
+See [Testing](#Testing) for the full set of platforms that we test against.
+
+[![Build Status](https://travis-ci.org/Netflix-Skunkworks/jvmquake.svg?branch=master)](https://travis-ci.org/Netflix-Skunkworks/jvmquake)
 
 ## How to Use the Agent
-Once you have the agent built, to use it just run your java program with
-`agentpath` or `agentlib`.
+Once you have the agent library, run your java program with `agentpath` or `agentlib`
+to load it.
 
 ```
 java -agentpath:/path/to/libjvmquake.so <your java program here>
 ```
+
+If you have installed the `.so` to `/usr/lib` (for example using a debian
+package) you can just do `java -agentpath:libjvmquake.so`.
 
 The default settings are 30 seconds of GC deficit with a 1:5 gc:running time
 weight, and the default action is to trigger an in JVM OOM. These defaults
@@ -236,20 +250,39 @@ java -agentpath:/path/to/libjvmquake.so=30,1,9,warn=1,touch=/tmp/jvmquake <your 
 
 # Testing
 `jvmquake` comes with a test suite of OOM conditions (running out of memory,
-threads, gcing too much, etc) which you can run if you have `tox` and
+threads, gcing too much, etc) which you can run if you have a `jdk`, `tox` and
 `python3` available:
 
 ```bash
 # Run the test suite which uses tox, pytest, and plumbum under the hood
 # to run jvmquake through numerous difficult failure modes
-make test
+JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/ make test
 ```
 
-If you have docker you can also run the tests with that
+If you have docker you can also run specific environment tests that bundle all
+dependencies for a platform into a single dockerized build:
+
 ```bash
-# Run the test suite via Docker
-make docker
+# Run the Ubuntu bionic openjdk8 test suite via Docker
+make test_bionic_openjdk8
 ```
 
 There is also a test suite in `tests/test_java_opts.py` which shows that
-the standard JVM options do or do not work in various situations.
+the standard JVM options do not work to remediate the situations `jvmquake`
+handles.
+
+## Automated Tests
+
+We currently [test](.travis.yml) every commit and the released `.so` generated
+with OpenJDK 8 against the following platforms:
+
+* Ubuntu Xenial with OpenJDK8
+* Ubuntu Bionic with OpenJDK8
+* Ubuntu Bionic with OpenJDK11
+* Ubuntu Bionic with Zulu8
+* Ubuntu Bionic with Zulu11
+* Ubuntu Focal with OpenJDK8
+* Ubuntu Focal with OpenJDK11
+* Centos7 with OpenJDK8
+
+[![Build Status](https://travis-ci.org/Netflix-Skunkworks/jvmquake.svg?branch=master)](https://travis-ci.org/Netflix-Skunkworks/jvmquake)
