@@ -48,11 +48,6 @@ build_deb_in_docker: build_in_docker
 
 # Ubuntu builds test with both the .so and the .deb
 
-test_xenial_openjdk8: UBUNTU_VERSION=16.04
-test_xenial_openjdk8: JAVA_VERSION=8
-test_xenial_openjdk8: TEST_NAME=test_xenial_openjdk8
-test_xenial_openjdk8: test_ubuntu_with_openjdk
-
 test_bionic_zulu8: UBUNTU_VERSION=18.04
 test_bionic_zulu8: JAVA_VERSION=8
 test_bionic_zulu8: TEST_NAME=test_bionic_zulu8
