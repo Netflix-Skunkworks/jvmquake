@@ -102,10 +102,10 @@ In addition, `jvmquake` supports keyword arguments passed as comma separated
 `int,int,int,key1=value1,key2=value2`. The currently supported key value pairs
 are:
  * `warn` (type: int, default: maxint): an amount of GC "deficit" (analogous
-   to `threshold` which will  cause `jvmquake` to touch a file (see `touch`)
+   to `threshold`) which will cause `jvmquake` to touch a file (see `touch`)
    before it kills the JVM. The default setting is not to warn.
  * `touch` (type: string, default: `/tmp/jvmquake_warn_gc`): The file path that
-   jvmquake should open (creating if neccesary) and update the access and
+   jvmquake should open (creating if necessary) and update the access and
    modification time on when there is more than `warn` GC "deficit".
 
 ## Algorithm Details
