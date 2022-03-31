@@ -127,11 +127,11 @@ token_bucket : int = 0
 # The amount of weight to give running seconds over GCing seconds. This defines
 # our expected application throughput
 runtime_weight : int = 5
-# The amount of time that we must exceed the expected throughput by before
-# triggering the signal and death actions
+# The amount of time that we must exceed the expected throughput by
+# before triggering the signal and death actions
 gc_threshold : int = 30
 
-# Time bookeeping
+# Time bookkeeping
 last_gc_start : int = current_time()
 last_gc_end : int = current_time()
 
@@ -200,7 +200,7 @@ If you have installed the `.so` to `/usr/lib` (for example using a debian
 package) you can just do `java -agentpath:libjvmquake.so`.
 
 The default settings are 30 seconds of GC deficit with a 1:5 gc:running time
-weight, and the default action is to trigger an in JVM OOM. These defaults
+weight, and the default action is to trigger an in-JVM OOM. These defaults
 are reasonable for a latency critical java application.
 
 If you want different settings you can pass options per the
@@ -242,7 +242,7 @@ java -agentpath:/path/to/libjvmquake.so=60,10,0 <your java program here>
 
 If you want to trigger a `SIGKILL` immediately after a 30s GC deficit accrues
 and touch `/tmp/jvmquake` after _any_ 1s GC pause or more (presumably to inform
-a watching process to fire off some kind of profiler or other diagnostics.
+a watching process to fire off some kind of profiler or other diagnostics):
 
 ```
 java -agentpath:/path/to/libjvmquake.so=30,1,9,warn=1,touch=/tmp/jvmquake <your java program here>
